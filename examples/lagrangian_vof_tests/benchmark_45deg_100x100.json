@@ -1,0 +1,46 @@
+{
+  "test": "45deg_droplet_advection",
+  "method": "Barkhudarov Lagrangian VOF",
+  "normals": "Least-Squares 3x3 (Prewitt convolution)",
+  "grid": "100x100",
+  "domain": "[0,1]x[0,1]",
+  "droplet": {
+    "center": [
+      0.2,
+      0.2
+    ],
+    "radius": 0.05
+  },
+  "velocity": {
+    "u": 1.0,
+    "v": 1.0
+  },
+  "CFL": 0.5,
+  "dx": 0.01,
+  "dy": 0.01,
+  "dt": 0.005,
+  "n_steps": 71,
+  "t_end": 0.355,
+  "wall_time_s": 784.5,
+  "volume": {
+    "V0": 0.007849617130790541,
+    "Vf": 0.007849617130790035,
+    "relative_error": 6.453044098142067e-14
+  },
+  "perimeter_contour": {
+    "exact_2pi_r": 0.3141592653589793,
+    "P0": 0.31339189661981137,
+    "Pf": 0.31869470258068777,
+    "change_vs_initial_pct": 1.6920686265571971,
+    "final_vs_exact_pct": 1.443674505835757
+  },
+  "F_range": {
+    "min": 0.0,
+    "max": 1.0000001552843756
+  },
+  "fixes_applied": [
+    "Raw gradient gating (threshold=0.5) prevents PLIC erosion of interior cells",
+    "Deformed quads from lagrangian_move_faces instead of translated original grid",
+    "LS normals (Prewitt 3x3 convolution) per Barkhudarov 2004 Section 4"
+  ]
+}

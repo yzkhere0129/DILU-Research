@@ -1,0 +1,82 @@
+{
+  "0\u00b0": {
+    "angle_deg": 0,
+    "initial_center": [
+      0.15,
+      0.5
+    ],
+    "final_center": [
+      0.65,
+      0.5
+    ],
+    "V0": 0.007849616929888725,
+    "P0": 0.4,
+    "V_final": 0.007849641144275665,
+    "P_final": 0.3,
+    "dV_percent": 0.00030847858126429234,
+    "dP_percent": -25.000000000000007,
+    "wall_time_s": 33.09814739227295,
+    "volume_pass": false,
+    "perimeter_pass": false
+  },
+  "6\u00b0": {
+    "angle_deg": 6,
+    "initial_center": [
+      0.15,
+      0.4
+    ],
+    "final_center": [
+      0.6472609476841367,
+      0.4522642316338268
+    ],
+    "V0": 0.007849616929888725,
+    "P0": 0.4,
+    "V_final": 0.007849407382309437,
+    "P_final": 0.22000000000000003,
+    "dV_percent": 0.0026695261840179144,
+    "dP_percent": -44.99999999999999,
+    "wall_time_s": 33.35702967643738,
+    "volume_pass": false,
+    "perimeter_pass": false
+  },
+  "30\u00b0": {
+    "angle_deg": 30,
+    "initial_center": [
+      0.15,
+      0.35
+    ],
+    "final_center": [
+      0.5830127018922193,
+      0.6
+    ],
+    "V0": 0.007849616929888725,
+    "P0": 0.4,
+    "V_final": 0.007849295623600483,
+    "P_final": 0.0,
+    "dV_percent": 0.004093273482160802,
+    "dP_percent": -100.0,
+    "wall_time_s": 33.18978023529053,
+    "volume_pass": false,
+    "perimeter_pass": false
+  },
+  "45\u00b0": {
+    "angle_deg": 45,
+    "initial_center": [
+      0.2,
+      0.2
+    ],
+    "final_center": [
+      0.5535533905932738,
+      0.5535533905932737
+    ],
+    "V0": 0.0078496178612113,
+    "P0": 0.4,
+    "V_final": 0.007849575951695442,
+    "P_final": 0.0,
+    "dV_percent": 0.000533905173458079,
+    "dP_percent": -100.0,
+    "wall_time_s": 33.38933777809143,
+    "volume_pass": false,
+    "perimeter_pass": false
+  }
+}

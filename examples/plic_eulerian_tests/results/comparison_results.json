@@ -1,0 +1,22 @@
+[
+  {
+    "case": "B_rider_kothe",
+    "method": "clip",
+    "N": 128,
+    "n_steps": 1024,
+    "V_drift_pct": -63.53253158029551,
+    "L1_pct": 63.633986509562845,
+    "ms_per_step": 2.7021365240216255,
+    "passed": true
+  },
+  {
+    "case": "B_rider_kothe",
+    "method": "redistribute",
+    "N": 128,
+    "n_steps": 1024,
+    "V_drift_pct": -23.698768619379734,
+    "L1_pct": 23.768305748789665,
+    "ms_per_step": 3.334235167130828,
+    "passed": false
+  }
+]

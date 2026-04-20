@@ -1,0 +1,44 @@
+# Build artifacts (regenerate via build.sh on target machine)
+dilu/ffi_mvp/build/
+dilu/**/build/
+*.so
+*.o
+*.obj
+*.a
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+!dilu/ffi_mvp/cuda/Makefile  # keep source Makefiles if any
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Profiler outputs (re-generate per machine; they're large and machine-specific)
+**/tmp_trace/
+*.xplane.pb
+*.trace.json.gz
+*.nsys-rep
+*.qdrep
+*.sqlite
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local Python venv
+.venv/
+venv/
+
+# Memory / secrets
+memory/*.json
+memory/*.secret

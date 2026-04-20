@@ -1,0 +1,23 @@
+{
+  "45\u00b0": {
+    "angle_deg": 45,
+    "grid_nx_ny_nz": [
+      100,
+      100,
+      5
+    ],
+    "dx": 0.01,
+    "n_steps": 112,
+    "overlay_mode": "plic_centroid_clip",
+    "V0": 0.0003924808115698397,
+    "P0": 0.3133918970036659,
+    "P_analytical": 0.3141592653589793,
+    "V_final": 0.00039246046799235046,
+    "P_final": 0.3128592602349934,
+    "dV_percent": 0.005183330468535997,
+    "dP_percent": -0.1699586919014244,
+    "wall_time_s": 97.05658459663391,
+    "volume_pass": false,
+    "perimeter_pass": true
+  }
+}
