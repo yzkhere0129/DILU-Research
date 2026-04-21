@@ -1,0 +1,108 @@
+{
+  "p2": {
+    "16": {
+      "iters": 24,
+      "total_wall_s": 0.0445
+    },
+    "32": {
+      "iters": 128,
+      "total_wall_s": 0.5558
+    },
+    "64": {
+      "iters": 99,
+      "total_wall_s": 6.49
+    },
+    "128": {
+      "iters": 186,
+      "total_wall_s": 28.47
+    }
+  },
+  "p3": {
+    "16": {
+      "iters": 36,
+      "total_wall_s": 0.0343
+    },
+    "32": {
+      "iters": 197,
+      "total_wall_s": 0.2041
+    },
+    "64": {
+      "iters": 158,
+      "total_wall_s": 8.082
+    },
+    "128": {
+      "iters": 296,
+      "total_wall_s": 34.997
+    }
+  },
+  "p4": [
+    {
+      "grid": 16,
+      "n": 4096,
+      "nnz": 27136,
+      "cfg_label": "CLASSICAL",
+      "build_csr_wall_s": 0.03094625473022461,
+      "setup_wall_s": 0.37467479705810547,
+      "first_solve_wall_s": 0.15698719024658203,
+      "steady_solve_wall_s": 0.016564369201660156,
+      "total_fresh_wall_s": 0.5316619873046875,
+      "iters": 15,
+      "status": 0,
+      "vram_pre_mib": 663,
+      "vram_post_setup_mib": 977,
+      "vram_post_mib": 929,
+      "per_iter_median_ms": 1.1042912801106772
+    },
+    {
+      "grid": 32,
+      "n": 32768,
+      "nnz": 223232,
+      "cfg_label": "CLASSICAL",
+      "build_csr_wall_s": 0.2229447364807129,
+      "setup_wall_s": 0.0617220401763916,
+      "first_solve_wall_s": 0.1451728343963623,
+      "steady_solve_wall_s": 0.02894139289855957,
+      "total_fresh_wall_s": 0.2068948745727539,
+      "iters": 16,
+      "status": 0,
+      "vram_pre_mib": 931,
+      "vram_post_setup_mib": 975,
+      "vram_post_mib": 933,
+      "per_iter_median_ms": 1.8088370561599731
+    },
+    {
+      "grid": 64,
+      "n": 262144,
+      "nnz": 1810432,
+      "cfg_label": "CLASSICAL",
+      "build_csr_wall_s": 1.916325569152832,
+      "setup_wall_s": 0.2631251811981201,
+      "first_solve_wall_s": 0.19948458671569824,
+      "steady_solve_wall_s": 0.08089661598205566,
+      "total_fresh_wall_s": 0.46260976791381836,
+      "iters": 16,
+      "status": 0,
+      "vram_pre_mib": 957,
+      "vram_post_setup_mib": 1319,
+      "vram_post_mib": 1279,
+      "per_iter_median_ms": 5.056038498878479
+    },
+    {
+      "grid": 128,
+      "n": 2097152,
+      "nnz": 14581760,
+      "cfg_label": "AGGRESSIVE",
+      "build_csr_wall_s": 15.548533916473389,
+      "setup_wall_s": 0.5653035640716553,
+      "first_solve_wall_s": 0.7217929363250732,
+      "steady_solve_wall_s": 0.5554392337799072,
+      "total_fresh_wall_s": 1.2870965003967285,
+      "iters": 43,
+      "status": 0,
+      "vram_pre_mib": 1445,
+      "vram_post_setup_mib": 1687,
+      "vram_post_mib": 1593,
+      "per_iter_median_ms": 12.917191483253655
+    }
+  ]
+}
