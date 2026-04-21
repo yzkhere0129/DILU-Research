@@ -1,0 +1,27 @@
+{
+  "label": "dispatch_64",
+  "n": 64,
+  "N": 262144,
+  "nnz": 1810432,
+  "tol": 1e-10,
+  "pcg_max_iter": 500,
+  "nvidia_smi_pre": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096 MiB, 1595 MiB, 2370 MiB",
+  "P2": {
+    "apply_med_us": 8001.26200010709,
+    "apply_p95_us": 9038.580999913393,
+    "iters": 99,
+    "converged": true,
+    "rnorm": 4.896109677057151e-08,
+    "wall_s": 6.490129266999702
+  },
+  "P3": {
+    "apply_med_us": 3033.673000118142,
+    "apply_p95_us": 4212.09500018449,
+    "iters": 158,
+    "converged": true,
+    "rnorm": 4.8749803812632e-08,
+    "wall_s": 8.081570301000284,
+    "n_colors": 2
+  },
+  "nvidia_smi_post": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096 MiB, 1632 MiB, 2333 MiB"
+}
