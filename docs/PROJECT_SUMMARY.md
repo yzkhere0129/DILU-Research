@@ -11,6 +11,11 @@ must be able to use this document plus the design / benchmark reports listed in 
 reproduce every code artifact in `dilu/` and to verify each implementation against the
 deterministic outputs listed in §6.
 
+**If your environment does not exactly match the reference** (different GPU, CUDA minor
+version, JAX patch release, etc.), read `docs/PORTABILITY.md` BEFORE interpreting §6's
+exact numbers as strict requirements. Most acceptance criteria are numerically equivalent
+across a wide version window even when wall times and VRAM differ.
+
 ---
 
 ## 0. Project goal (verbatim from master plan)
@@ -993,21 +998,30 @@ tolerated exception to the zero-PCIe-copy contract across all four phases.
 
 ## 11. Reproducibility disclaimer
 
-**Deterministic outputs** (iter counts, max errors, correlation values,
-HLO structure) are bit-identical on the reference environment (§4) and
-MUST match exactly. Section 6 gives the canonical numbers.
+This project distinguishes three layers of reproducibility. The authoritative
+definitions and version windows live in `docs/PORTABILITY.md`; a one-paragraph
+recap follows.
 
-**Environment-sensitive outputs** (wall times, per-call medians, VRAM
-absolutes) depend on GPU thermal state, system load, and concurrent
-processes. Section 7 gives acceptance ranges. Running on hardware other
-than RTX 3050 Laptop will produce different absolute numbers; scaling
-ratios should hold within ±30%.
+- **L1 — Bit-identical** (§6 numbers to the last ULP): requires JAX, jaxlib,
+  CUDA, AMGx, compiler, and GPU arch all matching the reference environment
+  (§4). Used for CI-grade byte diffing.
+- **L2 — Numerically equivalent** (iter counts, correlation values, same
+  branch choices): holds across a wide version window — JAX 0.9.x, CUDA
+  12.x, AMGx v2.4+, all Ampere-and-newer GPUs. **This is the layer that
+  matters for scientific correctness.** The three sentinel numbers (T7=24
+  / T7-multicolor=36 / T9=15) must match at this layer regardless of
+  hardware.
+- **L3 — Behaviorally equivalent** (wall times, VRAM absolutes, scaling
+  ratios): absolute values differ by hardware; scaling ratios hold within
+  ±30%.
 
-**Bit-identical reproducibility is bounded by the IEEE-754 stack**: same
-JAX version, same CUDA version, same cuSPARSE version, same AMGx version,
-same compiler, same `-O2` flag. Any of these changing may shift ULP-level
-results.
+**If your environment is not the reference environment**:
+see `docs/PORTABILITY.md` for supported version windows, migration
+procedures, and a breakage-signal decoder. Do NOT treat §6's exact
+numbers as a strict requirement unless you are specifically doing L1-level
+CI. L2 conformance (the sentinel triple) is the real correctness gate.
 
 *End of project summary. For per-phase full detail see `docs/design/`
 and `docs/benchmark/`. For context handoff to the next session, see
-`docs/session_logs/SESSION_HANDOFF_20260421.md`.*
+`docs/session_logs/SESSION_HANDOFF_20260421.md`. For cross-environment
+compatibility, see `docs/PORTABILITY.md`.*
