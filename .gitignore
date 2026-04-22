@@ -42,3 +42,4 @@ venv/
 # Memory / secrets
 memory/*.json
 memory/*.secret
+.claude/
