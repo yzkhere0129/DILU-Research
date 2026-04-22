@@ -105,10 +105,17 @@ variant's preset in `dilu/amgx/python/config.py`.
 
 | Preconditioner | Iterations | Setup (s) | Solve (s) | **Total wall (s)** | **vs Phase 2** | VRAM peak (MiB) |
 |----------------|-----------:|----------:|----------:|-------------------:|---------------:|----------------:|
+| **CPU Traditional DILU** (Ryzen 5 5600H, 1 thread) | 186 | 11.78 | 146.21 | **157.99** | 0.18× (5.55× slower) | n/a (host) |
 | **Phase 2 cuSPARSE DILU** (baseline) | 186 | 0.02 | 28.45 | **28.47** | 1.00× | ~200 |
 | **Phase 3 multi-color DILU** | 296 | 0.03 | 34.97 | **35.00** | 0.81× (regresses) | ~200 |
 | **Phase 4 AMGx CLASSICAL_V_CYCLE** | **15** | 1.80 | 0.63 | **2.43** | **11.7×** | 2340 (over 2 GiB budget) |
 | **Phase 4 AMGx AGGRESSIVE** (deployed on 3050) | 43 | 0.57 | 0.56 | **1.29** | **22.1×** | 292 |
+
+> CPU Traditional DILU row added 2026-04-22. Measured on a different
+> machine (5600H / WSL2) than the GPU rows; see
+> `docs/benchmark/canonical_cpu_dilu.md` for environment. Iter count
+> matches Phase 2 exactly (186), confirming the matrix is bit-identical.
+> Script: `dilu/reference/cpu_dilu_pcg.py`.
 
 **Headline number (deployed on 3050 Laptop)**: AMGx AGGRESSIVE is **22.1×
 faster** than Phase 2 cuSPARSE DILU on this case (28.47 s → 1.29 s). The
