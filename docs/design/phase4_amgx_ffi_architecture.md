@@ -209,7 +209,7 @@ Output (device-resident):
 **Work** (inside the handler):
 1. `AMGX_initialize` (once per process, guarded by `std::once_flag`).
 2. Get-or-create `AMGX_resources_handle` (one per device, singleton).
-3. `AMGX_config_create` from the supplied JSON string. Config is ephemeral per setup — we destroy it after the matrix is built, since AMGx copies config state into the solver.
+3. `AMGX_config_create` from the supplied JSON string. **⚠️ CONFIG LIFETIME — load-bearing correctness rule**: the `AMGX_config_handle` must live as long as the `AMGX_solver_handle` that references it. Internally `Solver::m_cfg` is a **raw pointer** into the config object, NOT a deep copy. Destroying the config after `AMGX_solver_create` (or after `AMGX_solver_setup`) leaves the solver with a dangling pointer; the first `AMGX_solver_solve` call dereferences it via `AMG_Config::getParameter<int>` → SIGSEGV. Therefore the config MUST be stored in the plan entry and destroyed ONLY at `release` time, AFTER the solver. See PROJECT_SUMMARY §8.3.
 4. `AMGX_matrix_create(mat, rsc, mode=AMGX_mode_dDDI)` — d=device, D=double (A/b/x type), D=double (intermediate), I=int (indices).
 5. `AMGX_matrix_upload_all(mat, n, nnz, 1, 1, row_ptr_dev, col_idx_dev, values_dev, /*diag=*/NULL)`. Per §5, AMGx will `cudaMemcpyDefault` from our device pointers into its own device buffers — one D→D copy of size (N+1+nnz) int32 + nnz float64 ≈ 200 MB at 128³.
 6. `AMGX_solver_create(solver, rsc, mode, cfg)`.
@@ -344,7 +344,10 @@ struct AmgxPlanEntry {
   AMGX_vector_handle b_vec = nullptr;
   AMGX_vector_handle x_vec = nullptr;
 
-  // The config string we built this plan from. Kept for diagnostics.
+  // CONFIG LIFETIME: the solver holds a raw pointer into this config
+  // (Solver::m_cfg is not a deep copy). Config MUST outlive the solver,
+  // and release() MUST destroy solver BEFORE config. See §3.1 step 3
+  // and PROJECT_SUMMARY §8.3.
   std::string config_json;
 
   // Plan-owned D→D-copy-of-pattern CSR buffers? Option:
@@ -373,7 +376,7 @@ AMGX_resources_handle get_amgx_resources(int device);
 
 **Answer: yes, with one subtlety.** AMGx resources are designed to be long-lived (per-device), and solvers/matrices can be created/destroyed on demand. This maps well onto our "one resources handle, many plans" pattern. The subtlety:
 
-- **Configs must be destroyed promptly after `solver_create`**. The solver copies what it needs from the config, and the config holds device memory that we want back. We destroy the config at end of `amgx_setup`, not at plan-release time.
+- **⚠️ CORRECTION (2026-04-22, caught by blind-reproduction test)**: a prior version of this section instructed destroying configs after `solver_create`. **That is wrong and causes SIGSEGV on first solve** (see §3.1 step 3 and PROJECT_SUMMARY §8.3). The correct rule is: **config must be stored in the plan entry and destroyed AFTER the solver at release time**. The solver holds a raw pointer into the config object (`Solver::m_cfg`), not a copy. Config destruction order at release: `solver → vectors → matrix → config`.
 - **Vectors must be created once and reused**. Creating a fresh `AMGX_vector_handle` per `solve` call is documented as slow (~microseconds of AMGx overhead per create/destroy). Our design creates b_vec, x_vec once per plan and reuses — uploads rebind the data pointer, not the handle.
 
 ### §4.4 `AMGX_initialize` lifecycle

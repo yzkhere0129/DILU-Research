@@ -325,10 +325,12 @@ Errors: InvalidArg on token-pattern mismatch; Internal on cuSPARSE failure.
 4. `cusparseSetStream(handle, xla_stream)`.
 5. Launch scatter kernel: working_values = values with diag positions overwritten by $D_*$.
 6. Bind the `cusparseSpMatDescr_t` to `working_values`, configure fill=LOWER, diag=NON_UNIT.
-7. `cusparseSpSV_solve(forward)` → produces $y$ in a workspace vector.
-8. Launch elementwise kernel: $\tilde y = D_* \odot y$ (the "$D_* y$" RHS of the backward solve). This matches the $M = (D_*+L) D_*^{-1} (D_*+U)$ factorization — the middle $D_*^{-1}$ cancels with one of the diagonals; confirm exact form with the math expert before implementation.
-9. Reconfigure SpMat to fill=UPPER, diag=NON_UNIT.
-10. `cusparseSpSV_solve(backward)` → produces $z$.
+7. **⚠️ MANDATORY `cusparseSpSV_updateMatrix` before EVERY solve**: `cusparseSpSV_updateMatrix(handle, spsv_L_descr, working_values, CUSPARSE_SPSV_UPDATE_GENERAL)`. Load-bearing correctness rule: `cusparseSpSV_analysis` caches the diagonal values of the matrix it was analysed on — subsequent writes to `working_values` are INVISIBLE to the next `cusparseSpSV_solve` unless `updateMatrix` is called. Omitting this step causes T6 to fail with max err ~0.13 (not at ULP floor). See PROJECT_SUMMARY §8.1.
+8. `cusparseSpSV_solve(forward)` → produces $y$ in a workspace vector.
+9. Launch elementwise kernel: $\tilde y = D_* \odot y$ (the "$D_* y$" RHS of the backward solve). This matches the $M = (D_*+L) D_*^{-1} (D_*+U)$ factorization — the middle $D_*^{-1}$ cancels with one of the diagonals; confirm exact form with the math expert before implementation.
+10. Reconfigure SpMat to fill=UPPER, diag=NON_UNIT.
+11. `cusparseSpSV_updateMatrix(handle, spsv_U_descr, working_values, CUSPARSE_SPSV_UPDATE_GENERAL)` — same rule as step 7, applies to the backward descriptor.
+12. `cusparseSpSV_solve(backward)` → produces $z$.
 11. Return.
 
 Total: 2 × cuSPARSE SpSV_solve, 1 × scatter kernel, 1 × elementwise scale. Zero `cudaMalloc` in the hot path (workspaces were allocated at analyze time). Zero host syncs beyond the token copy.

@@ -757,7 +757,12 @@ The following are fixed-point reproducible on the reference environment
 - T5 max err: `4.440892098500626e-16`
 - T6.1 max err: `1.6653345369377348e-16`
 - T6.2 max err: `2.220446049250313e-16`
-- **T7 iter count: EXACTLY 24** for DILU-PCG; **71** for Jacobi-PCG
+- **T7 iter count: EXACTLY 24** for DILU-PCG; **71** for Jacobi-PCG.
+  **Tolerance is load-bearing**: relative residual ≤ **1e-8** (not 1e-10
+  as some adjacent docs use for other benchmarks), RHS seed=0
+  standard-normal, max_iter=500, 16³ stiff matrix per Phase 2 T7 setup.
+  Changing tol shifts the iter count — a blind reader using tol=1e-10
+  instead measures DILU=29 / Jacobi=85 and fails the sentinel.
 - under-jit apply HLO: 1 custom-call, 0 copy ops
 
 ### 6.3 Phase 2.5
@@ -791,8 +796,15 @@ The following are fixed-point reproducible on the reference environment
 
 - Smoke (8³): iters=**13**, relres=`9.377e-11`, status=0
 - T8 rel err vs DILU (16³): `5.80e-11`
-- **T9 iters (128³ CLASSICAL): EXACTLY 15**
-- T9 iters (128³ AGGRESSIVE): **43**
+- **T9 iters (128³ CLASSICAL): EXACTLY 15** — VRAM-gated; requires
+  ≥ 2600 MiB free VRAM (peak usage 2340 MiB per §8.5). On a 4 GB card
+  with WSL2 + desktop residuals this is often not satisfied; in that
+  case fall back to the AGGRESSIVE sentinel below.
+- **T9 iters (128³ AGGRESSIVE): EXACTLY 43** — L2 fallback sentinel for
+  VRAM-constrained environments (peak 292 MiB). On any compatible
+  environment, AT LEAST ONE of {CLASSICAL-128³=15, AGGRESSIVE-128³=43}
+  must match exactly. Adjacent sentinel to cross-verify either: T9
+  CLASSICAL 64³ = **EXACTLY 16**.
 - T11 under-jit: 1 custom-call, 0 copy ops
 - T12 Test A max|∇·u|: `5.92e-9`
 - T12 Test B ‖u‖∞: `2.754e-6`, max|div|: `3.98e-14`

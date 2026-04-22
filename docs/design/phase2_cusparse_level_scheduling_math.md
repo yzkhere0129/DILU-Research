@@ -176,6 +176,29 @@ $$
 
 **此表应作为 §5 acceptance criteria 的基础**。
 
+### 2.5 ⚠️ 关键实现规则 — `cusparseSpSV_updateMatrix` 必须在每次 solve 前调用
+
+**这是 Phase 2 的一个头号坑**（blind-reproduction test 2026-04-22 confirmed）。新手读完 §2.2 / §2.3 后最容易遗漏：
+
+**现象**：
+- `cusparseSpSV_analysis` **不只缓存 sparsity 模式，还缓存矩阵的对角值**。
+- 我们的 `apply` 流程是：每次 solve 前用 scatter kernel 把 $D_*$ 写进 `working_values` 的对角位置（§2.2），然后 `cusparseSpSV_solve`。
+- 如果 analyze 时 working_values 对角还是 $A$ 的原始对角（未写 $D_*$），analyze 记下的"对角"就是 $A_{ii}$；之后 scatter 写 $D_*$ 完全**不生效**，solve 仍用旧对角。
+- T6 测试会爆 max err ~0.13（不是 ULP 级），远超 tolerance。
+
+**强制规则**：每次 `cusparseSpSV_solve` 前，必须显式调用
+
+```
+cusparseSpSV_updateMatrix(handle, spsv_descr, working_values,
+                          CUSPARSE_SPSV_UPDATE_GENERAL);
+```
+
+让 cuSPARSE **重新读取当前的 values 缓冲**（含 scatter 后的 $D_*$）。Forward solve 和 backward solve 的 descriptor 各自独立，都要 update。
+
+**对应到 FFI 架构**：Phase 2 engineering doc `phase2_cusparse_ffi_architecture.md` §4.3 hot-path 步骤 7 和步骤 11 各自包含一次 `updateMatrix`——**不能省**。PROJECT_SUMMARY §8.1 作为冗余保险重述此规则。
+
+**验证**：实装 `apply` 后立即跑 T6（3D 7-pt Laplacian 8³ / 12³）对比 serial NumPy 参考。max err 必须在 ULP floor（1e-16 量级）；若出现 ~0.13 的 err，99% 是本规则没守。
+
 ---
 
 ## 3. Level scheduling 应用到 AM Poisson 矩阵
