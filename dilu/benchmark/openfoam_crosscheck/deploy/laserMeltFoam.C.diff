@@ -1,0 +1,37 @@
+--- laserMeltFoam.C
++++ laserMeltFoam.C
+@@ -74,13 +74,16 @@
+ #include "fvcSmooth.H"
+ #include "dynamicRefineFvMesh.H"
+ 
+-// Added 
++// Added
+ #include "liquidFractionFunctions.H"
+ #include "laserThreePhaseMixture.H"
+ #include "turbulenceModelNew.H"
+-#include "interpolationTable.H" 
++#include "interpolationTable.H"
+ #include "laserHeatSource.H"
+ 
++// DILU-Research crosscheck matrix dumper (see matrixDumper.H)
++#include "matrixDumper.H"
++
+ 
+ // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+ 
+@@ -108,11 +111,14 @@
+     #include "createCellColumns.H" //added
+     #include "interfaceProperties.H" //added
+ 
+-    #include "initCorrectPhi.H" 
++    #include "initCorrectPhi.H"
+     #include "createUfIfPresent.H"
+     #include "porousCourantNo.H"
+     #include "setInitialDeltaT.H"
+ 
++    // DILU-Research matrixDumper: reads system/matrixDumperDict if present.
++    Foam::matrixDumper matrixDumper_(runTime);
++
+     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+     Info<< "\nStarting time loop\n" << endl;
+ 

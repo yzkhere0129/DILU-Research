@@ -1,0 +1,30 @@
+Loading 21 senior pd bundles (80³=512K, nnz=3.55M)...
+  loaded 21
+
+==========================================================================================
+Method 2: Our openfoam_cpu replica (PBiCG+DILU, single-thread numpy/numba)
+==========================================================================================
+(WARNING: PBiCG+DILU != OpenFOAM PCG+DIC on pd; same converged x but ~2× iters)
+  N=21  median solve=11654.9ms  median iters=195  converged=21/21
+
+==========================================================================================
+Method 3: AMGx amortized (this machine GPU)
+==========================================================================================
+  N=21  median total (excl first)=1324.3ms  median iters=26
+
+==========================================================================================
+Method 3b: AMGx amortized + 1 IR (precision config)
+==========================================================================================
+  N=21  median total (excl first)=1438.1ms
+
+==========================================================================================
+3-WAY HEAD-TO-HEAD (per pd solve, 512K cells, senior data)
+==========================================================================================
+method                                                         wall (ms)  speedup vs OF
+------------------------------------------------------------------------------------------
+OpenFOAM PCG+DIC, lab Xeon Gold 5120 N=32 (28 phys + 4 SMT)         44.1    1.00× (ref)
+Our PBiCG+DILU replica (this machine, single-thread)             11654.9          0.004×
+AMGx amortized (this machine GPU)                                 1324.3          0.033×
+AMGx amortized + 1 IR (machine-precision config)                  1438.1          0.031×
+
+Wrote /home/yzk/DILU-Research/dilu/amgx/bench/threeway_senior_results.json

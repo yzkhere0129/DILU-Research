@@ -15,6 +15,7 @@ was once intended.
 | `CONSERVATIVE_REDISTRIBUTE_SPEC.md` | Weymouth-Zaleski 2010-style overshoot/undershoot redistribute. K=3 fixed `fori_loop` iterations, sweep-direction-aware shift via zero-padded slicing, final safety `jnp.clip`. | `src/jax_laseram/vof/plic/conservative_bounds.py` | **Current** |
 | `FLOAT64_NUMERICAL_ANALYSIS.md` | Dtype sensitivity analysis: expected V drift at clip/redistribute × f32/f64 (5 orders + 9 orders respectively), per-epsilon sensitivity audit, RTX 3050 performance forecast (~4× slowdown), Priority 1-4 modification checklist. Predicts L1 shape error is unaffected by dtype (dominated by O(Δx) Youngs truncation). | Cross-module | **Current** |
 | `LAGRANGIAN_VOF_3D_SPEC.md` | Lagrangian VOF 3D pipeline (Barkhudarov 2004 hex-box Sutherland-Hodgman overlay). Kept as oracle / comparison baseline. | `src/jax_laseram/vof/lagrangian_3d/` | Legacy (current) |
+| `MATRIX_EXTRACTION_SPEC.md` | OpenFOAM `laserMeltFoam` matrix extraction toolchain — solver-level hook + serialization to MatrixMarket + sanity verification + npz transport. Full file inventory, exact patches, step-by-step procedure, validation checklist. | `LaserbeamFoam/applications/solvers/laserMeltFoam/matrixDumper.H` + 3 patches; `dilu/benchmark/openfoam_crosscheck/` Python drivers | **Current** |
 
 ## When to use
 

@@ -1,0 +1,25 @@
+--- TEqn.H.pristine	2026-04-24 13:18:20.525377340 +0800
++++ TEqn.H.patched	2026-05-03 16:00:26.812861059 +0800
+@@ -46,7 +46,22 @@
+ 
+     TEqn.relax();
+ 
++    // --- DILU-Research matrixDumper: pre-solve snapshot (A, b, x0) ---
++    matrixDumper_.dumpPreSolve(TEqn, "T", T);
++
++    // --- DILU-Research timing (always-on, independent of matrixDumper) ---
++    auto _T_t0 = std::chrono::steady_clock::now();
++
+     Tp = TEqn.solve();
++
++    auto _T_t1 = std::chrono::steady_clock::now();
++    Info << "[TIMING_T] "
++         << std::chrono::duration<double, std::milli>(_T_t1 - _T_t0).count()
++         << " ms" << nl;
++
++    // --- DILU-Research matrixDumper: post-solve (x_final, perf) ---
++    matrixDumper_.dumpPostSolve("T", T, Tp, TEqn);
++
+     #include "liquidFraction.H"
+ 
+     // perfRes = Tp.initialResidual();

@@ -1,0 +1,29 @@
+--- pEqn.H.pristine	2026-04-24 13:18:20.525377340 +0800
++++ pEqn.H.patched	2026-05-03 16:00:19.788981889 +0800
+@@ -123,11 +123,25 @@
+ 
+     pdEqn.relax();
+ 
+-    pdEqn.solve(
++    // --- DILU-Research matrixDumper: pre-solve snapshot ---
++    matrixDumper_.dumpPreSolve(pdEqn, "pd", pd);
++
++    // --- DILU-Research timing (always-on, independent of matrixDumper) ---
++    auto _pd_t0 = std::chrono::steady_clock::now();
++
++    Foam::SolverPerformance<Foam::scalar> pdPerf = pdEqn.solve(
+         // mesh.solutionDict().solution(pd.select(pimple.finalInnerIter()))
+         mesh.solutionDict(pd.select(pimple.finalInnerIter())) // TODO this might not work right
+     );
+ 
++    auto _pd_t1 = std::chrono::steady_clock::now();
++    Info << "[TIMING_pd] "
++         << std::chrono::duration<double, std::milli>(_pd_t1 - _pd_t0).count()
++         << " ms" << nl;
++
++    // --- DILU-Research matrixDumper: post-solve ---
++    matrixDumper_.dumpPostSolve("pd", pd, pdPerf, pdEqn);
++
+     if (pimple.finalNonOrthogonalIter())
+     {
+       phi -= pdEqn.flux();

@@ -1,0 +1,665 @@
+{
+  "date": "2026-05-04T16:46:45.737315",
+  "of_baseline_ms": 44.1,
+  "of_baseline_label": "OpenFOAM PCG-DIC, 32 MPI ranks (28 phys + 4 SMT), Xeon Gold 5120 (lab)",
+  "n_bundles": 21,
+  "n_cells": 512000,
+  "nnz": 3545600,
+  "mode_fresh": [
+    {
+      "step": 1,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 4588.753938674927,
+      "solve_ms": 329.817533493042,
+      "total_ms": 4918.571472167969
+    },
+    {
+      "step": 1,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 2147.6869583129883,
+      "solve_ms": 193.56608390808105,
+      "total_ms": 2341.2530422210693
+    },
+    {
+      "step": 1,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 316.0238265991211,
+      "solve_ms": 2061.8820190429688,
+      "total_ms": 2377.90584564209
+    },
+    {
+      "step": 2,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 326.6458511352539,
+      "solve_ms": 210.77680587768555,
+      "total_ms": 537.4226570129395
+    },
+    {
+      "step": 2,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 2094.9840545654297,
+      "solve_ms": 239.68219757080078,
+      "total_ms": 2334.6662521362305
+    },
+    {
+      "step": 2,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 329.9281597137451,
+      "solve_ms": 217.39840507507324,
+      "total_ms": 547.3265647888184
+    },
+    {
+      "step": 3,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 2196.4645385742188,
+      "solve_ms": 223.85597229003906,
+      "total_ms": 2420.320510864258
+    },
+    {
+      "step": 3,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 329.81371879577637,
+      "solve_ms": 213.78755569458008,
+      "total_ms": 543.6012744903564
+    },
+    {
+      "step": 3,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 343.7840938568115,
+      "solve_ms": 220.31354904174805,
+      "total_ms": 564.0976428985596
+    },
+    {
+      "step": 4,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 2022.2342014312744,
+      "solve_ms": 226.32241249084473,
+      "total_ms": 2248.556613922119
+    },
+    {
+      "step": 4,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 306.75673484802246,
+      "solve_ms": 207.12542533874512,
+      "total_ms": 513.8821601867676
+    },
+    {
+      "step": 4,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 1962.0978832244873,
+      "solve_ms": 209.70916748046875,
+      "total_ms": 2171.807050704956
+    },
+    {
+      "step": 5,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 314.6491050720215,
+      "solve_ms": 206.3887119293213,
+      "total_ms": 521.0378170013428
+    },
+    {
+      "step": 5,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 332.8261375427246,
+      "solve_ms": 219.06185150146484,
+      "total_ms": 551.8879890441895
+    },
+    {
+      "step": 5,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 331.66003227233887,
+      "solve_ms": 1943.016529083252,
+      "total_ms": 2274.676561355591
+    },
+    {
+      "step": 10,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 292.0529842376709,
+      "solve_ms": 192.95215606689453,
+      "total_ms": 485.00514030456543
+    },
+    {
+      "step": 10,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 288.4225845336914,
+      "solve_ms": 1889.0142440795898,
+      "total_ms": 2177.4368286132812
+    },
+    {
+      "step": 10,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 327.10742950439453,
+      "solve_ms": 223.88982772827148,
+      "total_ms": 550.997257232666
+    },
+    {
+      "step": 11,
+      "corr": 1,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 149.70898628234863,
+      "solve_ms": 212.92567253112793,
+      "total_ms": 362.63465881347656
+    },
+    {
+      "step": 11,
+      "corr": 2,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 309.93175506591797,
+      "solve_ms": 207.9768180847168,
+      "total_ms": 517.9085731506348
+    },
+    {
+      "step": 11,
+      "corr": 3,
+      "iters": 26,
+      "status": 0,
+      "setup_ms": 2033.9272022247314,
+      "solve_ms": 216.44854545593262,
+      "total_ms": 2250.375747680664
+    }
+  ],
+  "mode_amortized": [
+    {
+      "step": 1,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 354.10428047180176,
+      "update_ms": 0.0,
+      "solve_ms": 214.86759185791016,
+      "ir_ms": 0.0,
+      "total_ms": 568.9718723297119,
+      "is_first": true
+    },
+    {
+      "step": 1,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 343.78910064697266,
+      "solve_ms": 195.25790214538574,
+      "ir_ms": 0.0,
+      "total_ms": 539.0470027923584,
+      "is_first": false
+    },
+    {
+      "step": 1,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 316.93577766418457,
+      "solve_ms": 1885.8873844146729,
+      "ir_ms": 0.0,
+      "total_ms": 2202.8231620788574,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 312.7732276916504,
+      "solve_ms": 208.53066444396973,
+      "ir_ms": 0.0,
+      "total_ms": 521.3038921356201,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 318.05419921875,
+      "solve_ms": 1878.5691261291504,
+      "ir_ms": 0.0,
+      "total_ms": 2196.6233253479004,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 311.4614486694336,
+      "solve_ms": 207.0770263671875,
+      "ir_ms": 0.0,
+      "total_ms": 518.5384750366211,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 348.0792045593262,
+      "solve_ms": 1775.6178379058838,
+      "ir_ms": 0.0,
+      "total_ms": 2123.69704246521,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 301.3265132904053,
+      "solve_ms": 209.54012870788574,
+      "ir_ms": 0.0,
+      "total_ms": 510.866641998291,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1998.4323978424072,
+      "solve_ms": 214.22195434570312,
+      "ir_ms": 0.0,
+      "total_ms": 2212.6543521881104,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 310.3203773498535,
+      "solve_ms": 209.19537544250488,
+      "ir_ms": 0.0,
+      "total_ms": 519.5157527923584,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 2000.6113052368164,
+      "solve_ms": 220.1404571533203,
+      "ir_ms": 0.0,
+      "total_ms": 2220.7517623901367,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 343.3248996734619,
+      "solve_ms": 223.40989112854004,
+      "ir_ms": 0.0,
+      "total_ms": 566.734790802002,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1910.0630283355713,
+      "solve_ms": 203.92680168151855,
+      "ir_ms": 0.0,
+      "total_ms": 2113.98983001709,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 311.77473068237305,
+      "solve_ms": 207.5800895690918,
+      "ir_ms": 0.0,
+      "total_ms": 519.3548202514648,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 2055.647134780884,
+      "solve_ms": 226.38463973999023,
+      "ir_ms": 0.0,
+      "total_ms": 2282.031774520874,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 331.01797103881836,
+      "solve_ms": 1883.9552402496338,
+      "ir_ms": 0.0,
+      "total_ms": 2214.973211288452,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 315.2587413787842,
+      "solve_ms": 208.6348533630371,
+      "ir_ms": 0.0,
+      "total_ms": 523.8935947418213,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 303.38478088378906,
+      "solve_ms": 1741.1563396453857,
+      "ir_ms": 0.0,
+      "total_ms": 2044.5411205291748,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 327.8939723968506,
+      "solve_ms": 216.72630310058594,
+      "ir_ms": 0.0,
+      "total_ms": 544.6202754974365,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 330.0185203552246,
+      "solve_ms": -16.22915267944336,
+      "ir_ms": 0.0,
+      "total_ms": 313.78936767578125,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 311.73229217529297,
+      "solve_ms": 205.8887481689453,
+      "ir_ms": 0.0,
+      "total_ms": 517.6210403442383,
+      "is_first": false
+    }
+  ],
+  "mode_amortized_ir": [
+    {
+      "step": 1,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 1979.543685913086,
+      "update_ms": 0.0,
+      "solve_ms": 219.66791152954102,
+      "ir_ms": 105.79514503479004,
+      "total_ms": 2305.006742477417,
+      "is_first": true
+    },
+    {
+      "step": 1,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 312.67714500427246,
+      "solve_ms": 206.18391036987305,
+      "ir_ms": 1783.8027477264404,
+      "total_ms": 2302.663803100586,
+      "is_first": false
+    },
+    {
+      "step": 1,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 292.5553321838379,
+      "solve_ms": 194.1230297088623,
+      "ir_ms": 99.8382568359375,
+      "total_ms": 586.5166187286377,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1924.144983291626,
+      "solve_ms": 237.99467086791992,
+      "ir_ms": 112.95151710510254,
+      "total_ms": 2275.0911712646484,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 327.32105255126953,
+      "solve_ms": 208.03284645080566,
+      "ir_ms": 1791.2259101867676,
+      "total_ms": 2326.579809188843,
+      "is_first": false
+    },
+    {
+      "step": 2,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 315.37365913391113,
+      "solve_ms": 205.963134765625,
+      "ir_ms": 105.55911064147949,
+      "total_ms": 626.8959045410156,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 325.5343437194824,
+      "solve_ms": 1861.4861965179443,
+      "ir_ms": 106.45914077758789,
+      "total_ms": 2293.4796810150146,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 285.3198051452637,
+      "solve_ms": 189.20493125915527,
+      "ir_ms": 96.25720977783203,
+      "total_ms": 570.781946182251,
+      "is_first": false
+    },
+    {
+      "step": 3,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1965.451717376709,
+      "solve_ms": 206.24661445617676,
+      "ir_ms": 111.74321174621582,
+      "total_ms": 2283.4415435791016,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 344.50578689575195,
+      "solve_ms": 1918.0819988250732,
+      "ir_ms": 117.42353439331055,
+      "total_ms": 2380.0113201141357,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 311.5077018737793,
+      "solve_ms": 207.11636543273926,
+      "ir_ms": 114.92252349853516,
+      "total_ms": 633.5465908050537,
+      "is_first": false
+    },
+    {
+      "step": 4,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1986.769199371338,
+      "solve_ms": 189.29529190063477,
+      "ir_ms": 105.29017448425293,
+      "total_ms": 2281.3546657562256,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 282.7134132385254,
+      "solve_ms": 1840.8350944519043,
+      "ir_ms": 108.16597938537598,
+      "total_ms": 2231.7144870758057,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 312.3593330383301,
+      "solve_ms": 205.36112785339355,
+      "ir_ms": 105.67426681518555,
+      "total_ms": 623.3947277069092,
+      "is_first": false
+    },
+    {
+      "step": 5,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 1997.5392818450928,
+      "solve_ms": 213.53793144226074,
+      "ir_ms": 107.85102844238281,
+      "total_ms": 2318.9282417297363,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 313.3087158203125,
+      "solve_ms": 210.4945182800293,
+      "ir_ms": 1722.3269939422607,
+      "total_ms": 2246.1302280426025,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 287.494421005249,
+      "solve_ms": 191.7111873626709,
+      "ir_ms": 107.97357559204102,
+      "total_ms": 587.1791839599609,
+      "is_first": false
+    },
+    {
+      "step": 10,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 31.589269638061523,
+      "solve_ms": 212.5706672668457,
+      "ir_ms": 111.77873611450195,
+      "total_ms": 355.9386730194092,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 1,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 305.0675392150879,
+      "solve_ms": 204.67543601989746,
+      "ir_ms": 1822.1876621246338,
+      "total_ms": 2331.930637359619,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 2,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 316.6086673736572,
+      "solve_ms": 206.06422424316406,
+      "ir_ms": 113.74831199645996,
+      "total_ms": 636.4212036132812,
+      "is_first": false
+    },
+    {
+      "step": 11,
+      "corr": 3,
+      "iters": 26,
+      "setup_ms": 0.0,
+      "update_ms": 303.8609027862549,
+      "solve_ms": 1931.6959381103516,
+      "ir_ms": 113.94095420837402,
+      "total_ms": 2349.4977951049805,
+      "is_first": false
+    }
+  ]
+}

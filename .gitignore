@@ -43,3 +43,23 @@ venv/
 memory/*.json
 memory/*.secret
 .claude/
+
+# Large benchmark data (transfer via scp to lab machines)
+# Senior's pd matrices ~6.4 GB; npz / collected ~11 GB; raw OF dumps too big
+dilu/benchmark/DICPCG_Benchmark_Data/
+dilu/benchmark/DICPCG_Benchmark_Data.zip
+dilu/benchmark/openfoam_crosscheck/collected/
+dilu/benchmark/openfoam_crosscheck/spot_melt_npz.tar
+dilu/benchmark/openfoam_crosscheck/scaling_results_lab*/
+
+# Compiled AMGx FFI lib (rebuild on each machine)
+dilu/amgx/build/
+
+# Worktree
+.claude/worktrees/
+
+# Zone.Identifier (Windows-side download tags)
+*:Zone.Identifier
+
+# Worktrees (claude-managed)
+.claude/worktrees/

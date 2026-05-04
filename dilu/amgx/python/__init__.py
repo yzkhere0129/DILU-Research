@@ -18,9 +18,16 @@ from .plan import Plan
 from .config import (
     CLASSICAL_V_CYCLE,
     AGGRESSIVE_COARSENING,
+    CLASSICAL_V_DIAGSCALED,
+    CLASSICAL_V_DIAGSCALED_TIGHT,
+    CLASSICAL_V_DIAGSCALED_BICGSTAB,
+    CLASSICAL_GS_PCG,
+    CLASSICAL_GS_BICGSTAB,
+    AGGREGATION_PCG,
     MINI_AMG_TEST,
     with_tolerance,
 )
+from .refinement import amgx_solve_with_refinement
 
 __all__ = [
     "amgx_setup",
@@ -30,6 +37,13 @@ __all__ = [
     "Plan",
     "CLASSICAL_V_CYCLE",
     "AGGRESSIVE_COARSENING",
+    "CLASSICAL_V_DIAGSCALED",
+    "CLASSICAL_V_DIAGSCALED_TIGHT",
+    "CLASSICAL_V_DIAGSCALED_BICGSTAB",
+    "CLASSICAL_GS_PCG",
+    "CLASSICAL_GS_BICGSTAB",
+    "AGGREGATION_PCG",
     "MINI_AMG_TEST",
     "with_tolerance",
+    "amgx_solve_with_refinement",
 ]
