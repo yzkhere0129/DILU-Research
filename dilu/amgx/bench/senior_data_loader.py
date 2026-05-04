@@ -17,8 +17,15 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-SENIOR_BASE = Path(
+# Two data sources:
+#   1. Compact npz (preferred, git-tracked, ~160 MB): bundle_pd_<step>_<corr>.npz
+#   2. Original CSV (6.4 GB raw, gitignored): legacy
+SENIOR_NPZ_BASE = Path(
+    "/home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz")
+SENIOR_CSV_BASE = Path(
     "/home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data/Initial_Period")
+# Backwards-compat alias used by older code:
+SENIOR_BASE = SENIOR_CSV_BASE
 
 MESH_NX, MESH_NY, MESH_NZ = 80, 80, 80
 MESH_N = MESH_NX * MESH_NY * MESH_NZ  # = 512000
@@ -53,18 +60,28 @@ def _load_matrix_csv(path: Path, n: int) -> csr_matrix:
     return A
 
 
-def load_step(step: int, corr: int) -> SeniorBundle | None:
-    """Load (matrix, source, solution) for given (step, corrector).
+def _load_step_npz(step: int, corr: int) -> SeniorBundle | None:
+    """Load from compact npz if present (preferred path)."""
+    p = SENIOR_NPZ_BASE / f"bundle_pd_{step:02d}_{corr}.npz"
+    if not p.exists():
+        return None
+    z = np.load(p)
+    n = int(z["n"][0])
+    A = csr_matrix(
+        (z["A_data"], z["A_indices"], z["A_indptr"]), shape=(n, n)
+    )
+    return SeniorBundle(A=A, b=z["b"], x_ref=z["x_ref"],
+                        step=step, corr=corr, n=n)
 
-    Returns None if matrix file missing (steps 6-9 lack matrices).
-    """
-    base = SENIOR_BASE / "Solving"
+
+def _load_step_csv(step: int, corr: int) -> SeniorBundle | None:
+    """Load from raw CSV (legacy / source-of-truth path)."""
+    base = SENIOR_CSV_BASE / "Solving"
     mp = base / f"matrix_pd_{step}_{corr}.csv"
     sp = base / f"source_pd_{step}_{corr}.csv"
     xp = base / f"solution_pd_{step}_{corr}.csv"
     if not (mp.exists() and sp.exists() and xp.exists()):
         return None
-
     b = _load_value_csv(sp)
     x_ref = _load_value_csv(xp)
     n = b.size
@@ -72,12 +89,33 @@ def load_step(step: int, corr: int) -> SeniorBundle | None:
     return SeniorBundle(A=A, b=b, x_ref=x_ref, step=step, corr=corr, n=n)
 
 
+def load_step(step: int, corr: int) -> SeniorBundle | None:
+    """Load (matrix, source, solution). Tries npz first (fast, git-tracked),
+    falls back to CSV (slower, gitignored 6.4 GB raw)."""
+    bundle = _load_step_npz(step, corr)
+    if bundle is not None:
+        return bundle
+    return _load_step_csv(step, corr)
+
+
 def list_available() -> list[tuple[int, int]]:
-    """Return list of (step, corr) tuples that have all 3 CSVs."""
+    """Return list of (step, corr) tuples available (in npz or CSV)."""
     out = []
+    if SENIOR_NPZ_BASE.exists():
+        for p in sorted(SENIOR_NPZ_BASE.glob("bundle_pd_*.npz")):
+            stem = p.stem  # bundle_pd_01_2
+            parts = stem.split("_")
+            try:
+                step = int(parts[2]); corr = int(parts[3])
+                out.append((step, corr))
+            except (IndexError, ValueError):
+                continue
+        if out:
+            return out
+    # Fallback: scan CSV
     for step in range(1, 12):
         for corr in (1, 2, 3):
-            base = SENIOR_BASE / "Solving"
+            base = SENIOR_CSV_BASE / "Solving"
             if all((base / f"{p}_pd_{step}_{corr}.csv").exists()
                    for p in ("matrix", "source", "solution")):
                 out.append((step, corr))
