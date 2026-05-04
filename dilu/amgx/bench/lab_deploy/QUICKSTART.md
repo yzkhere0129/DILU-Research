@@ -103,16 +103,16 @@ make -j8
 # 生成 dilu/amgx/build/libdilu_amgx.so
 ```
 
-### 步骤 2 — 拷贝学长数据（6.4 GB，scp 可能 5-30 min）
+### 步骤 2 — 学长数据（已通过 git 提交，无需 scp）
 
+学长 21 个 pd 矩阵已转成 161 MB npz 提交到仓库
+（`dilu/benchmark/DICPCG_Benchmark_Data_npz/bundle_pd_*.npz`）。
+git pull 时一起拉下来。
+
+验证：
 ```bash
-# 从这台机器（你用的开发机）push 到 lab 5060
-scp -r /home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data \
-    user@lab-5060:/home/yzk/DILU-Research/dilu/benchmark/
-
-# 验证
-ls /home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data/Initial_Period/Solving/ | wc -l
-# 应该 ~88 文件
+ls ~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz/ | wc -l
+# 应该 21 个 .npz 文件
 ```
 
 ### 步骤 3 — 跑 bench
