@@ -20,10 +20,10 @@ from scipy.sparse import csr_matrix
 # Two data sources:
 #   1. Compact npz (preferred, git-tracked, ~160 MB): bundle_pd_<step>_<corr>.npz
 #   2. Original CSV (6.4 GB raw, gitignored): legacy
-SENIOR_NPZ_BASE = Path(
-    "/home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz")
-SENIOR_CSV_BASE = Path(
-    "/home/yzk/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data/Initial_Period")
+# Resolve relative to repo root (= 4 dirs above this file: dilu/amgx/bench/<this>)
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+SENIOR_NPZ_BASE = _REPO_ROOT / "dilu" / "benchmark" / "DICPCG_Benchmark_Data_npz"
+SENIOR_CSV_BASE = _REPO_ROOT / "dilu" / "benchmark" / "DICPCG_Benchmark_Data" / "Initial_Period"
 # Backwards-compat alias used by older code:
 SENIOR_BASE = SENIOR_CSV_BASE
 
