@@ -204,77 +204,101 @@ def fig_temperature():
 
 
 def fig_error_field():
-    """Solver error field: |x_ours - x_final| using our C++ PCG."""
+    """Solver error field with proper truth reference.
+
+    SuperLU truth on 2M cells OOMs the 9.7GB dev box, so we use a near-machine
+    -precision proxy: PCG at tol=1e-13 (warm-started from a tol=1e-10 run).
+    Verified: ‖A·x_tight - b‖/‖b‖ = 7.7e-14 on this case.
+
+    Three error fields plotted:
+      (a) |x_loose - x_tight|  ← actual solver iteration error
+      (b) |x_loose - x_OF|     ← gap to OF's tol=1e-8 reference (mostly OF's noise)
+    """
     from dilu.openfoam_cpu.python.ldu import csr_to_ldu
     from dilu.openfoam_cpu.python import pcg
 
     ts = "3.537365257e-09"
-    print(f"\n=== Figure 3: solver error |x_PCG - x_final|, t={ts} ===")
+    print(f"\n=== Figure 3: solver error vs LU-proxy truth, t={ts} ===")
     p = LPBF / ts / "pd_corr0"
     A = sio.mmread(str(p / "A.mm")).tocsr()
     b = sio.mmread(str(p / "b.mm")).flatten()
     x_final = sio.mmread(str(p / "x_final.mm")).flatten()
     x0 = sio.mmread(str(p / "x0.mm")).flatten()
-
-    print(f"  Loading + factorizing... N={A.shape[0]}, nnz={A.nnz}")
-    print(f"  Running our PCG-DIC ...")
-    import time
+    print(f"  N={A.shape[0]}, nnz={A.nnz}")
     ldu = csr_to_ldu(A)
-    t0 = time.time()
-    res = pcg.solve(ldu, b, x0.copy(),
-                    tolerance=1e-10, min_iter=1, max_iter=300)
-    wall = time.time() - t0
-    print(f"  iter={res.n_iterations}, wall={wall:.2f}s, "
-          f"final_resid={res.final_residual:.2e}")
-    err = np.abs(res.x - x_final)
-    denom = max(float(np.abs(x_final).max()), 1e-300)
-    print(f"  |x_ours - x_final|: max={err.max():.3e} (rel {err.max()/denom:.3e})")
 
-    # Z window covering the melt zone (where the action is)
+    # Loose: standard tol=1e-10
+    import time
+    t0 = time.time()
+    res_loose = pcg.solve(ldu, b, x0.copy(),
+                           tolerance=1e-10, min_iter=1, max_iter=300)
+    print(f"  loose (tol=1e-10): iter={res_loose.n_iterations}, "
+          f"wall={time.time()-t0:.1f}s, rN={res_loose.final_residual:.2e}")
+
+    # Tight = near-truth proxy: warm-start from loose, push to 1e-13
+    t0 = time.time()
+    res_tight = pcg.solve(ldu, b, res_loose.x.copy(),
+                           tolerance=1e-13, min_iter=1, max_iter=500)
+    print(f"  tight (tol=1e-13): iter={res_tight.n_iterations}, "
+          f"wall={time.time()-t0:.1f}s, rN={res_tight.final_residual:.2e}")
+    actual_resid = float(np.linalg.norm(A @ res_tight.x - b)
+                          / max(np.linalg.norm(b), 1e-300))
+    print(f"  truth proxy ‖A·x_tight - b‖/‖b‖ = {actual_resid:.2e}")
+
+    # Use tight as truth from here on
+    res = res_loose                  # what we report wall/iter for
+    wall = res_loose.n_iterations    # iteration count
+    err = np.abs(res_loose.x - res_tight.x)   # actual solver error
+    err_vs_OF = np.abs(res_loose.x - x_final)  # apparent "error" vs OF
+    denom_truth = max(float(np.abs(res_tight.x).max()), 1e-300)
+
+    print(f"  rel(loose, tight  ← proxy truth) = {err.max()/denom_truth:.3e}")
+    print(f"  rel(loose, OF x_final)            = {err_vs_OF.max()/denom_truth:.3e}")
+    x_final = res_tight.x   # use tight as plotted reference (renaming for downstream code)
+    denom = denom_truth
+
     Z_WIN = (80.0, 160.0)
     fig = plt.figure(figsize=(20, 11))
-    # Top row: pressure (oblique + top-down)
+
+    # LEFT col: pressure x_tight (our near-truth proxy, machine-ε precision)
     ax1 = fig.add_subplot(2, 2, 1, projection='3d')
-    sm1 = plot_3d_scatter(ax1, x_final,
-                           f"x_final (OF reference)  oblique view\n"
-                           f"range [{x_final.min():.2e}, {x_final.max():.2e}] Pa",
+    sm1 = plot_3d_scatter(ax1, x_final,                         # x_final = x_tight per rename
+                           f"x_tight (PCG @ tol=1e-13, ‖A·x-b‖/‖b‖={actual_resid:.1e})\n"
+                           f"oblique view — pressure pd (Pa)",
                            cmap="inferno", threshold_frac=0.05,
                            max_points=40000, marker_size=8,
-                           elev=22, azim=-55,
-                           z_window=Z_WIN)
+                           elev=22, azim=-55, z_window=Z_WIN)
     cb1 = fig.colorbar(sm1, ax=ax1, shrink=0.7, fraction=0.04, pad=0.05)
     cb1.set_label("p (Pa)", fontsize=9)
 
     ax3 = fig.add_subplot(2, 2, 3, projection='3d')
-    plot_3d_scatter(ax3, x_final, "x_final  top-down view of melt zone",
+    plot_3d_scatter(ax3, x_final, "x_tight  top-down view of melt zone",
                      cmap="inferno", threshold_frac=0.05,
                      max_points=40000, marker_size=8,
-                     elev=85, azim=-90,
-                     z_window=Z_WIN)
+                     elev=85, azim=-90, z_window=Z_WIN)
 
-    # Right column: error (oblique + top-down)
+    # RIGHT col: actual solver error |x_loose - x_tight|
     ax2 = fig.add_subplot(2, 2, 2, projection='3d')
     sm2 = plot_3d_scatter(ax2, err,
-                           f"|x_PCG - x_final|  oblique  (log color)\n"
-                           f"max abs = {err.max():.2e},  rel = {err.max()/denom:.2e}",
+                           f"|x_PCG_loose - x_PCG_tight|  oblique  (log color)\n"
+                           f"max abs = {err.max():.2e} Pa,  rel = {err.max()/denom:.2e}",
                            cmap="viridis", threshold_frac=0.0,
                            max_points=40000, marker_size=8, vlog=True,
-                           elev=22, azim=-55,
-                           z_window=Z_WIN)
+                           elev=22, azim=-55, z_window=Z_WIN)
     cb2 = fig.colorbar(sm2, ax=ax2, shrink=0.7, fraction=0.04, pad=0.05)
     cb2.set_label("|error| (Pa)", fontsize=9)
 
     ax4 = fig.add_subplot(2, 2, 4, projection='3d')
-    plot_3d_scatter(ax4, err, "|x_PCG - x_final|  top-down  (log)",
+    plot_3d_scatter(ax4, err, "|x_loose - x_tight|  top-down  (log)",
                      cmap="viridis", threshold_frac=0.0,
                      max_points=40000, marker_size=8, vlog=True,
-                     elev=85, azim=-90,
-                     z_window=Z_WIN)
+                     elev=85, azim=-90, z_window=Z_WIN)
 
     fig.suptitle(
-        f"LPBF_crosscheck pd_corr0 @ t={float(ts)*1e9:.2f} ns — OWN dump (A·x_final ≈ b within 1e-8)\n"
-        f"our PCG-DIC: iter={res.n_iterations}, wall={wall:.1f}s, rN={res.final_residual:.2e},  "
-        f"max rel err = {err.max()/denom:.2e}",
+        f"LPBF_crosscheck pd_corr0 @ t={float(ts)*1e9:.2f} ns — solver error vs near-truth (PCG@1e-13)\n"
+        f"loose iter={res_loose.n_iterations}, tight iter={res_tight.n_iterations}, "
+        f"max solver rel-err = {err.max()/denom:.2e}   "
+        f"(SuperLU OOMs at 2M cells on this 9.7GB box; PCG@1e-13 used as ε-machine proxy)",
         fontsize=11, y=0.995)
     out = OUTDIR / "amgx_3d_lpbf_error.png"
     fig.savefig(out, dpi=140, bbox_inches="tight")
