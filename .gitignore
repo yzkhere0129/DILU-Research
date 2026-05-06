@@ -44,13 +44,12 @@ memory/*.json
 memory/*.secret
 .claude/
 
-# Large benchmark data (transfer via scp to lab machines)
-# Senior's pd matrices ~6.4 GB; npz / collected ~11 GB; raw OF dumps too big
-dilu/benchmark/DICPCG_Benchmark_Data/
-dilu/benchmark/DICPCG_Benchmark_Data.zip
-# Senior's NEW Evaporation dataset — raw CSV is 1.9 GB; npz (605 MB) IS git-tracked
-dilu/benchmark/DICPCG_Benchmark_Data-20260506*/
-dilu/benchmark/DICPCG_Benchmark_Data-20260506*.zip
+# Senior's pd-matrix benchmark data — NOT tracked in git, ever.
+# User scps these directly between dev box and lab machines.
+# Includes raw CSV dumps, zip archives, AND the npz conversions.
+dilu/benchmark/DICPCG_Benchmark_Data*
+dilu/benchmark/Melting*
+# Old per-step LPBF dumps and tar archives
 dilu/benchmark/openfoam_crosscheck/collected/
 dilu/benchmark/openfoam_crosscheck/spot_melt_npz.tar
 dilu/benchmark/openfoam_crosscheck/scaling_results_lab*/
