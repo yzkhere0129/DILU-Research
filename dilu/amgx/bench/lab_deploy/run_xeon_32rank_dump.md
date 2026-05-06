@@ -11,23 +11,23 @@
 
 ## 步骤
 
-### 0. 找 lab Xeon 上的 case + 解算器
+### 0. 验证 lab Xeon 上 OF + matrixDumper 状态
 
 ```bash
 ssh manyxu@HR54WV2
-# 检查 LaserbeamFoam 是不是装好了 + 有 matrixDumper
-which laserMeltFoam 2>&1                    # OF 编译应该到 PATH 里
-ls -d ~/LaserbeamFoam/tutorials/laserMeltFoam/* 2>&1
-# 期望看到 LPBF_sanity / LPBF_crosscheck / spot_melt 之类
-```
+which laserMeltFoam
+# 应该指向 ~/OpenFOAM/yzk-v2506/.../bin/laserMeltFoam
 
-如果**没有** OF：
-```bash
-# 从 dev 机 scp 一份 LaserbeamFoam 源码 + 编译
-# (假设我们 dev 上 ~/LaserbeamFoam 编译好了)
-scp -r yzk@<dev_ip>:~/LaserbeamFoam ~/
-cd ~/LaserbeamFoam
-./Allwmake -j32   # 编 LaserbeamFoam + matrixDumper
+# matrixDumper 是 include 进 laserMeltFoam 源码的 (不是单独 .so),
+# 所以确认 binary 里有它的 symbol:
+strings $(which laserMeltFoam) | grep -i matrixDumper | head -3
+# 期望看到 "matrixDumperDict" / "matrixDumper" 这种字串
+# 如果什么都没看到, 说明这个 laserMeltFoam 不是从 LaserbeamFoam 仓库
+# 编出来的, 需要重编:
+#   cd ~/LaserbeamFoam && ./Allwmake -j32
+
+ls -d ~/LaserbeamFoam/tutorials/laserMeltFoam/* 2>&1
+# 看有没有 LPBF_crosscheck / LPBF_sanity / spot_melt
 ```
 
 ### 1. 准备 case：用 LPBF_crosscheck 改 endTime + writeInterval
@@ -43,7 +43,9 @@ foamCleanCase
 rm -rf processor* postProcessing
 ```
 
-### 2. 改 controlDict — 端到端跑到 1.2 μs
+### 2. 改 controlDict + matrixDumperDict
+
+**controlDict** — 端到端跑到 1.2 μs:
 
 ```bash
 cat > system/controlDict <<'EOF'
@@ -53,9 +55,9 @@ startFrom         startTime;
 startTime         0;
 stopAt            endTime;
 endTime           1.2e-6;        // 覆盖 melting + evaporation 两阶段
-deltaT            5e-10;          // 0.5 ns step (跟之前 sanity 一致)
+deltaT            5e-10;          // 0.5 ns step
 writeControl      adjustableRunTime;
-writeInterval     5e-8;          // 每 50 ns 写一次场量 (24 个时间步)
+writeInterval     5e-8;          // 每 50 ns 写一次场量
 purgeWrite        0;
 writeFormat       binary;
 writePrecision    8;
@@ -63,26 +65,40 @@ writeCompression  off;
 timeFormat        general;
 timePrecision     6;
 runTimeModifiable yes;
+EOF
+```
 
-functions
+**matrixDumperDict** — 6 个目标 timestep, 横跨 melting + evaporation:
+
+```bash
+# step index = time / deltaT = time / 5e-10
+# 我们要的:
+#   melting:    320 ns (step 640), 380 ns (step 760), 410 ns (step 820)
+#   evaporation: 700 ns (step 1400), 900 ns (step 1800), 1060 ns (step 2120)
+cat > system/matrixDumperDict <<'EOF'
+FoamFile { version 2.0; format ascii; class dictionary;
+           location "system"; object matrixDumperDict; }
+
+enabled        true;
+binaryMM       false;
+outputDir      "postProcessing/matrices";
+
+// 6 个 timestep: 3 melting + 3 evaporation
+dumpTimeSteps  (640 760 820 1400 1800 2120);
+
+// dump 哪几个方程
+equations      (pd T);
+
+// pd 有 3 个 corrector 都 dump; T 只 dump 第一个 corrector (矩阵结构同)
+maxCorrectorsPerEq
 {
-    matrixDumper
-    {
-        type            matrixDumper;
-        libs            ("libmatrixDumper.so");   // (确认 .so 在 $FOAM_USER_LIBBIN)
-        // 只在两个阶段 dump (避免每个 timestep dump 撑爆磁盘)
-        // matrixDumper 支持 timeRange 参数则用之, 否则后处理时筛选
-        equations       (T pd);
-        timeStart       3.0e-7;     // melting 起点
-        timeEnd         1.1e-6;     // evaporation 终点
-        executeControl  timeStep;
-        executeInterval 1;
-    }
+    pd  3;
+    T   1;
 }
 EOF
 ```
 
-> ⚠️ 如果 matrixDumper 不支持 `timeStart/timeEnd` 选项，去掉那两行，dump 全程，再用 Python 筛 melting/evap 阶段的 dump 就好（多花点磁盘）。
+预计磁盘: 6 timestep × 4 矩阵 (T + 3 pd) × ~670 MB = **~16 GB** 总量, 跨 32 个 processor 副本各占一份 (~50 MB / matrix / processor).
 
 ### 3. decomposeParDict — 32 ranks
 
@@ -100,23 +116,17 @@ EOF
 # 域分解
 decomposePar -force 2>&1 | tail -10
 
-# 估算磁盘:
-#  每个 timestep dump 1 个 T + 3 个 pd = 4 个矩阵 × 670 MB ≈ 2.7 GB
-#  从 t=300 ns 到 t=1100 ns, 1.6 K 个 timestep × 2.7 GB = 4.3 TB 太多!
-#  → matrixDumper 必须支持 timeStart/timeEnd 或者 stride 选项,
-#    每 10 ns dump 一次就 80 个 timestep × 2.7 GB = 216 GB, 还是大
-#  → 折中：matrixDumper 配 executeInterval 50 (每 50 step ≈ 25 ns)
-#    32 个 timestep × 4 矩阵 × 670 MB ≈ 86 GB 可以接受
-
-# 起跑 (32 ranks, 估计 6-12 hours wall)
+# 起跑 (32 ranks, 估计 8-30 分钟 wall, 取决于 timestep 复杂度)
 nohup mpirun --oversubscribe --bind-to none -np 32 \
     laserMeltFoam -parallel \
     > log.run 2>&1 &
 echo "PID: $!"
-tail -f log.run
+disown   # 防 ssh 断了 SIGHUP 杀进程
+tail -f log.run | grep -E "Time = |TIMING|matrixDumper|Final|deltaT"
+# 看到 "matrixDumper: dumping ..." 出现 6 次说明 6 个 dump 都触发了
 ```
 
-跑约 **6-12 小时**（取决于 dt 和迭代次数；更长的话改 endTime）。
+预计 **8-30 分钟** wall。每 timestep 大约 200-400 ms (32 ranks 上), 2400 个 step 总共。
 
 ### 5. 跑完处理
 
