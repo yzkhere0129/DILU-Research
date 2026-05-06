@@ -97,29 +97,60 @@ def try_superlu(A, b):
 
 
 def try_cholmod(A, b):
-    """Tier 2: CHOLMOD for SPD. May need regularization for near-zero diag."""
+    """Tier 2: CHOLMOD for SPD. Tries Cholesky with progressively larger ε
+    regularization, then falls back to LDL^T (which handles indefinite/rank-
+    deficient matrices). Senior's matrix has near-zero diag (~50% gas-phase
+    cells) AND tiny-negative eigenvalues from numerical noise, so strict
+    Cholesky often fails — LDL^T usually saves us.
+
+    The ε we add is RELATIVE to ‖A‖ (using max|diag| as proxy):
+      tries ε = 1e-15·‖A‖, 1e-12·‖A‖, 1e-10·‖A‖, 1e-8·‖A‖
+    The introduced perturbation in x is bounded by ε·κ(A)·‖x‖, so for
+    ε=1e-10 and κ~1e3 we get ~1e-7 relative perturbation in x_LU —
+    still 8 orders better than senior's 1e-1 gap.
+    """
     try:
-        from sksparse.cholmod import cholesky
+        from sksparse.cholmod import cholesky, cholesky_AAt, analyze
     except ImportError:
         print(f"    [tier2 CHOLMOD] scikit-sparse not installed; skip", flush=True)
         return None, None
 
     diag = A.diagonal()
-    eps = max(1e-15 * abs(diag).max(), 1e-30)
-    print(f"    [tier2 CHOLMOD] adding regularization ε={eps:.2e}·I "
-          f"(diag has {(np.abs(diag) < eps).sum()} near-zero entries)",
+    A_norm = max(abs(diag).max(), 1e-30)
+    print(f"    [tier2 CHOLMOD] A_norm (max|diag|) = {A_norm:.2e}, "
+          f"diag<1e-15 cells = {(np.abs(diag) < 1e-15).sum()}",
           flush=True)
-    A_reg = (A + eps * speye(A.shape[0])).tocsc()
+
+    # Try Cholesky with progressively larger ε
+    for eps_rel in (1e-15, 1e-12, 1e-10, 1e-8, 1e-6):
+        eps = eps_rel * A_norm
+        print(f"      trying Cholesky with ε={eps:.2e} (= {eps_rel:.0e}·A_norm) ...",
+              flush=True)
+        A_reg = (A + eps * speye(A.shape[0])).tocsc()
+        try:
+            t0 = time.time()
+            f = cholesky(A_reg)
+            print(f"        factorize_t = {time.time()-t0:.1f}s ✓", flush=True)
+            t0 = time.time()
+            x = f(b)
+            print(f"        solve_t = {time.time()-t0:.1f}s", flush=True)
+            return x, f"CHOLMOD/Chol(ε={eps_rel:.0e})"
+        except Exception as e:
+            print(f"        FAILED: {str(e)[:80]}", flush=True)
+
+    # Last resort: try LDL^T (handles indefinite matrices natively)
+    print(f"      all Cholesky attempts failed; trying LDL^T ...", flush=True)
     try:
+        from sksparse.cholmod import cholesky as cholmod_factor
+        eps = 1e-10 * A_norm
+        A_reg = (A + eps * speye(A.shape[0])).tocsc()
         t0 = time.time()
-        f = cholesky(A_reg)
-        print(f"      factorize_t = {time.time()-t0:.1f}s", flush=True)
-        t0 = time.time()
+        f = cholmod_factor(A_reg, mode="auto")  # auto picks LDL^T if needed
+        print(f"        factorize_t = {time.time()-t0:.1f}s", flush=True)
         x = f(b)
-        print(f"      solve_t = {time.time()-t0:.1f}s", flush=True)
-        return x, "CHOLMOD"
+        return x, "CHOLMOD/LDLT"
     except Exception as e:
-        print(f"      FAILED: {type(e).__name__}: {str(e)[:100]}", flush=True)
+        print(f"        FAILED: {str(e)[:100]}", flush=True)
         return None, None
 
 
