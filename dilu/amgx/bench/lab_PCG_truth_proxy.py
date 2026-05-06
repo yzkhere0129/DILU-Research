@@ -82,7 +82,11 @@ def pcg_truth(A_csr: csr_matrix, b: np.ndarray, *,
     from scipy.sparse.linalg import lsmr
 
     t0 = time.time()
-    res = lsmr(A_csr, b, atol=tol, btol=tol, maxiter=max_iter, show=False)
+    # conlim=0 disables the ill-conditioning early-exit
+    # (senior's matrix has cond ~ 1e16 due to ~50% near-zero diag cells;
+    # default conlim=1e8 makes LSMR quit at iter=1 with istop=3).
+    res = lsmr(A_csr, b, atol=tol, btol=tol, conlim=0,
+               maxiter=max_iter, show=False)
     x = res[0]
     istop = res[1]
     iters = res[2]
