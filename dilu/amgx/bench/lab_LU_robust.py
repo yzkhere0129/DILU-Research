@@ -32,6 +32,8 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix, eye as speye
 
+TIER_ORDER = "cholmod"  # default; main() overrides via --tier-order
+
 
 # -----------------------------------------------------------------------
 # CSV loaders (no senior_data_loader dependency, fully self-contained)
@@ -180,9 +182,17 @@ def solve_one(label: str, base: Path, step: int, corr: int):
         A = A_raw; b = b_raw; flipped = False
     print(f"  sign_flipped = {flipped}", flush=True)
 
-    # Try tiers
+    # Try tiers — CHOLMOD first (5× less memory than SuperLU on SPD).
+    # If you want to force SuperLU (e.g., to verify CHOLMOD result), pass
+    # --tier-order=superlu.
+    if TIER_ORDER == "cholmod":
+        tiers = (try_cholmod, try_superlu, try_mumps, try_lsmr)
+    elif TIER_ORDER == "superlu":
+        tiers = (try_superlu, try_cholmod, try_mumps, try_lsmr)
+    else:
+        raise ValueError(f"unknown tier_order {TIER_ORDER}")
     x = method = None
-    for tier in (try_superlu, try_cholmod, try_mumps, try_lsmr):
+    for tier in tiers:
         x, method = tier(A, b)
         if x is not None: break
 
@@ -224,7 +234,12 @@ def main():
     ap.add_argument("--steps", default="65,70,75",
                      help="comma-separated step numbers")
     ap.add_argument("--corrs", default="1", help="comma-separated corr numbers")
+    ap.add_argument("--tier-order", default="cholmod",
+                     choices=["cholmod", "superlu"],
+                     help="cholmod (default, low memory) or superlu first")
     args = ap.parse_args()
+    global TIER_ORDER
+    TIER_ORDER = args.tier_order
 
     repo = Path(__file__).resolve().parents[2]
     base_dir = repo / "benchmark" / args.dataset.capitalize() / args.dataset.capitalize()
