@@ -1,10 +1,9 @@
-"""Backup/alternative to LU truth: PCG to machine precision (tol=1e-14).
+"""Backup/alternative to LU truth: scipy LSMR (least-squares iterative).
 
-If SuperLU on 512K 3D Laplacian is too slow on lab, this gives a near-
-machine-precision proxy for x_truth in 3-10 min total. Method:
-  1. PCG-DIC at tol=1e-10 from x0=0 (gets us into the right basin)
-  2. Warm-start PCG-DIC at tol=1e-14 (push to machine precision)
-  3. Verify ‖A·x - b‖_2 / ‖b‖_2 ≤ 1e-13
+If SuperLU on 512K 3D Laplacian is too slow on lab, LSMR gives a robust
+min-residual solution in 1-5 minutes total.  Unlike PCG/CG it works on
+indefinite or rank-deficient matrices, which is what senior's dumps look
+like.
 
 Comparison numbers reported per case:
   rel_resid_LU      = ‖A·x_LU - b‖ / ‖b‖  (= 1e-13 by construction)
@@ -69,56 +68,39 @@ def load_matrix(p: Path, n: int) -> csr_matrix:
 
 
 def pcg_truth(A_csr: csr_matrix, b: np.ndarray, *,
-              tol_loose=1e-10, tol_tight=1e-14, max_iter=5000):
-    """PCG to machine precision via 2-stage warm-start, using scipy.cg.
+              tol=1e-12, max_iter=5000):
+    """Min-residual solution via scipy.lsmr — works on ANY matrix, even
+    indefinite or rank-deficient.  Returns x* minimizing ‖A·x - b‖₂.
 
-    No dependency on our compiled C++ kernels — only scipy + numpy.
-    Uses Jacobi preconditioner (diag^{-1}). For SPD A this is fine; for
-    senior's (negative-diagonal) Laplacian we sign-flip A and b first.
+    For consistent (A, b): converges to the exact solution.
+    For inconsistent: gives the least-squares solution; final residual
+    tells us 'how much of b lies outside col(A)'.
+
+    This is more robust than PCG/CG for senior's matrices (we already saw
+    PCG diverges due to A indefinite + b·1 ≠ 0).  No compiled-cpp dep.
     """
-    from scipy.sparse.linalg import cg as scipy_cg, LinearOperator
-
-    diag = A_csr.diagonal()
-    if diag.min() < 0 and diag.max() <= 0:
-        A_pos = -A_csr; b_pos = -b
-        was_flipped = True
-    else:
-        A_pos = A_csr; b_pos = b
-        was_flipped = False
-    diag_pos = A_pos.diagonal()
-    diag_safe = np.where(np.abs(diag_pos) > 1e-30, diag_pos, 1.0)
-    M = LinearOperator(A_pos.shape, matvec=lambda v: v / diag_safe,
-                        dtype=np.float64)
-
-    x0 = np.zeros_like(b_pos)
-    t0 = time.time()
-    x_loose, info = scipy_cg(A_pos, b_pos, M=M, x0=x0,
-                              atol=tol_loose, rtol=tol_loose,
-                              maxiter=max_iter)
-    t_l = time.time() - t0
-    rN_l = float(np.linalg.norm(A_pos @ x_loose - b_pos)
-                  / max(np.linalg.norm(b_pos), 1e-300))
-    print(f"    loose tol={tol_loose:.0e}: info={info}, wall={t_l:.1f}s, "
-          f"rel_resid={rN_l:.2e}", flush=True)
+    from scipy.sparse.linalg import lsmr
 
     t0 = time.time()
-    x_tight, info2 = scipy_cg(A_pos, b_pos, M=M, x0=x_loose.copy(),
-                               atol=tol_tight, rtol=tol_tight,
-                               maxiter=max_iter)
-    t_t = time.time() - t0
-    rN_t = float(np.linalg.norm(A_pos @ x_tight - b_pos)
-                  / max(np.linalg.norm(b_pos), 1e-300))
-    print(f"    tight tol={tol_tight:.0e}: info={info2}, wall={t_t:.1f}s, "
-          f"rel_resid={rN_t:.2e}", flush=True)
+    res = lsmr(A_csr, b, atol=tol, btol=tol, maxiter=max_iter, show=False)
+    x = res[0]
+    istop = res[1]
+    iters = res[2]
+    normr = res[3]
+    norma = res[4]
+    walltime = time.time() - t0
 
-    actual_rel = float(np.linalg.norm((-A_csr if was_flipped else A_csr) @ x_tight
-                                       - b) / max(np.linalg.norm(b), 1e-300))
-    return x_tight, dict(
-        loose_info=int(info), tight_info=int(info2),
-        loose_t=t_l, tight_t=t_t,
-        loose_rel_resid=rN_l, tight_rel_resid=rN_t,
-        actual_resid=actual_rel,
-    )
+    actual_rel = float(np.linalg.norm(A_csr @ x - b) / max(np.linalg.norm(b), 1e-300))
+    print(f"    lsmr: istop={istop}, iters={iters}, wall={walltime:.1f}s, "
+          f"‖A·x - b‖/‖b‖ = {actual_rel:.3e}", flush=True)
+    if actual_rel > 1e-3:
+        print(f"    ⚠️  large min-residual: b is FAR from col(A), "
+              f"‖b - proj_col(A)(b)‖ ≈ {actual_rel:.2e}·‖b‖")
+        print(f"        → (A, b) as dumped has no consistent solution")
+
+    return x, dict(istop=int(istop), iters=int(iters), wall=walltime,
+                    actual_resid=actual_rel, normr=float(normr),
+                    norma=float(norma))
 
 
 def check_one(label: str, base: Path, step: int, corr: int, piso_glob: str):
