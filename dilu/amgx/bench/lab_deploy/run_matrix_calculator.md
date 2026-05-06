@@ -3,7 +3,27 @@
 直接把 senior 那 21 + 57 = 78 个 pd 矩阵当作输入数据，跑各自的求解器测 wall + residual。
 **完全不动 OpenFOAM**。
 
-数据已经在 git 里 (605MB npz)，每台机 `git pull` 后就能跑。
+## 数据传输 (npz 不上 git，手动 scp)
+
+dev 机上 npz 路径：
+```
+~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz/              # 21 initial
+~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_Evaporation_npz/  # 57 evaporation + cell_coords
+```
+
+scp 到两台 lab（路径要跟 dev 机一致，loader 才能找到）：
+```bash
+# dev 机上执行 (~750 MB 总量)
+scp -r ~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz \
+       ~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_Evaporation_npz \
+       manyxu@HR54WV2:~/DILU-Research/dilu/benchmark/
+
+scp -r ~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_npz \
+       ~/DILU-Research/dilu/benchmark/DICPCG_Benchmark_Data_Evaporation_npz \
+       manyxu@5060:~/DILU-Research/dilu/benchmark/
+```
+
+bench 脚本（python 文件）走 git，每台机 `git pull` 拿。
 
 ## 矩阵预处理
 
