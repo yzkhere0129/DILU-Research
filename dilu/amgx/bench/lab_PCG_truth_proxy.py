@@ -69,47 +69,54 @@ def load_matrix(p: Path, n: int) -> csr_matrix:
 
 
 def pcg_truth(A_csr: csr_matrix, b: np.ndarray, *,
-              tol_loose=1e-10, tol_tight=1e-14, max_iter=2000):
-    """PCG-DIC to machine precision via 2-stage warm-start."""
-    from dilu.openfoam_cpu.python.ldu import csr_to_ldu
-    from dilu.openfoam_cpu.python import pcg
-    ldu = csr_to_ldu(A_csr)
+              tol_loose=1e-10, tol_tight=1e-14, max_iter=5000):
+    """PCG to machine precision via 2-stage warm-start, using scipy.cg.
 
-    # NOTE: senior's matrix has all-negative diag → flip sign first so DIC
-    # works (DIC requires positive diag). Solving (-A)·x = (-b) gives same x.
-    diag = ldu.diag
+    No dependency on our compiled C++ kernels — only scipy + numpy.
+    Uses Jacobi preconditioner (diag^{-1}). For SPD A this is fine; for
+    senior's (negative-diagonal) Laplacian we sign-flip A and b first.
+    """
+    from scipy.sparse.linalg import cg as scipy_cg, LinearOperator
+
+    diag = A_csr.diagonal()
     if diag.min() < 0 and diag.max() <= 0:
-        # flip via wrapping in negate; csr_to_ldu rebuilds from -A_csr
-        from dilu.openfoam_cpu.python.ldu import csr_to_ldu as _re
-        A_pos = -A_csr
-        b_pos = -b
-        ldu = _re(A_pos)
-        b_use = b_pos
+        A_pos = -A_csr; b_pos = -b
         was_flipped = True
     else:
-        b_use = b
+        A_pos = A_csr; b_pos = b
         was_flipped = False
+    diag_pos = A_pos.diagonal()
+    diag_safe = np.where(np.abs(diag_pos) > 1e-30, diag_pos, 1.0)
+    M = LinearOperator(A_pos.shape, matvec=lambda v: v / diag_safe,
+                        dtype=np.float64)
 
-    x0 = np.zeros_like(b_use)
+    x0 = np.zeros_like(b_pos)
     t0 = time.time()
-    res1 = pcg.solve(ldu, b_use, x0, tolerance=tol_loose,
-                     min_iter=1, max_iter=max_iter)
-    t_loose = time.time() - t0
-    print(f"    loose tol={tol_loose:.0e}: iter={res1.n_iterations}, "
-          f"wall={t_loose:.1f}s, rN={res1.final_residual:.2e}", flush=True)
+    x_loose, info = scipy_cg(A_pos, b_pos, M=M, x0=x0,
+                              atol=tol_loose, rtol=tol_loose,
+                              maxiter=max_iter)
+    t_l = time.time() - t0
+    rN_l = float(np.linalg.norm(A_pos @ x_loose - b_pos)
+                  / max(np.linalg.norm(b_pos), 1e-300))
+    print(f"    loose tol={tol_loose:.0e}: info={info}, wall={t_l:.1f}s, "
+          f"rel_resid={rN_l:.2e}", flush=True)
 
     t0 = time.time()
-    res2 = pcg.solve(ldu, b_use, res1.x.copy(), tolerance=tol_tight,
-                     min_iter=1, max_iter=max_iter)
-    t_tight = time.time() - t0
-    print(f"    tight tol={tol_tight:.0e}: iter={res2.n_iterations}, "
-          f"wall={t_tight:.1f}s, rN={res2.final_residual:.2e}", flush=True)
+    x_tight, info2 = scipy_cg(A_pos, b_pos, M=M, x0=x_loose.copy(),
+                               atol=tol_tight, rtol=tol_tight,
+                               maxiter=max_iter)
+    t_t = time.time() - t0
+    rN_t = float(np.linalg.norm(A_pos @ x_tight - b_pos)
+                  / max(np.linalg.norm(b_pos), 1e-300))
+    print(f"    tight tol={tol_tight:.0e}: info={info2}, wall={t_t:.1f}s, "
+          f"rel_resid={rN_t:.2e}", flush=True)
 
-    actual_rel = float(np.linalg.norm((-A_csr if was_flipped else A_csr) @ res2.x
+    actual_rel = float(np.linalg.norm((-A_csr if was_flipped else A_csr) @ x_tight
                                        - b) / max(np.linalg.norm(b), 1e-300))
-    return res2.x, dict(
-        loose_iter=res1.n_iterations, tight_iter=res2.n_iterations,
-        loose_t=t_loose, tight_t=t_tight,
+    return x_tight, dict(
+        loose_info=int(info), tight_info=int(info2),
+        loose_t=t_l, tight_t=t_t,
+        loose_rel_resid=rN_l, tight_rel_resid=rN_t,
         actual_resid=actual_rel,
     )
 
