@@ -48,6 +48,9 @@ memory/*.secret
 # Senior's pd matrices ~6.4 GB; npz / collected ~11 GB; raw OF dumps too big
 dilu/benchmark/DICPCG_Benchmark_Data/
 dilu/benchmark/DICPCG_Benchmark_Data.zip
+# Senior's NEW Evaporation dataset — raw CSV is 1.9 GB; npz (605 MB) IS git-tracked
+dilu/benchmark/DICPCG_Benchmark_Data-20260506*/
+dilu/benchmark/DICPCG_Benchmark_Data-20260506*.zip
 dilu/benchmark/openfoam_crosscheck/collected/
 dilu/benchmark/openfoam_crosscheck/spot_melt_npz.tar
 dilu/benchmark/openfoam_crosscheck/scaling_results_lab*/

@@ -17,18 +17,43 @@ import numpy as np
 from scipy.sparse import csr_matrix
 
 
-# Two data sources:
-#   1. Compact npz (preferred, git-tracked, ~160 MB): bundle_pd_<step>_<corr>.npz
-#   2. Original CSV (6.4 GB raw, gitignored): legacy
+# Two datasets, each with its own npz / CSV path:
+#   "initial"     — Initial_Period (cold start, T=298K, 21 matrices)
+#   "evaporation" — Evaporation phase (700ns to 1.06μs, melt + recoil onset, 57 matrices)
 # Resolve relative to repo root (= 4 dirs above this file: dilu/amgx/bench/<this>)
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-SENIOR_NPZ_BASE = _REPO_ROOT / "dilu" / "benchmark" / "DICPCG_Benchmark_Data_npz"
-SENIOR_CSV_BASE = _REPO_ROOT / "dilu" / "benchmark" / "DICPCG_Benchmark_Data" / "Initial_Period"
-# Backwards-compat alias used by older code:
-SENIOR_BASE = SENIOR_CSV_BASE
+_BENCH_BASE = _REPO_ROOT / "dilu" / "benchmark"
+
+DATASETS = {
+    "initial": {
+        "npz_dir": _BENCH_BASE / "DICPCG_Benchmark_Data_npz",
+        "csv_dir": _BENCH_BASE / "DICPCG_Benchmark_Data" / "Initial_Period",
+    },
+    "evaporation": {
+        "npz_dir": _BENCH_BASE / "DICPCG_Benchmark_Data_Evaporation_npz",
+        "csv_dir": (_BENCH_BASE
+                    / "DICPCG_Benchmark_Data-20260506T064717Z-3-002"
+                    / "DICPCG_Benchmark_Data" / "Evaporation"),
+    },
+}
+
+# Default to "initial" for backwards compat
+SENIOR_NPZ_BASE = DATASETS["initial"]["npz_dir"]
+SENIOR_CSV_BASE = DATASETS["initial"]["csv_dir"]
+SENIOR_BASE = SENIOR_CSV_BASE  # legacy alias
 
 MESH_NX, MESH_NY, MESH_NZ = 80, 80, 80
 MESH_N = MESH_NX * MESH_NY * MESH_NZ  # = 512000
+
+
+def set_dataset(name: str) -> None:
+    """Switch between 'initial' and 'evaporation' datasets globally."""
+    global SENIOR_NPZ_BASE, SENIOR_CSV_BASE, SENIOR_BASE
+    if name not in DATASETS:
+        raise ValueError(f"Unknown dataset {name!r}, choose from {list(DATASETS)}")
+    SENIOR_NPZ_BASE = DATASETS[name]["npz_dir"]
+    SENIOR_CSV_BASE = DATASETS[name]["csv_dir"]
+    SENIOR_BASE = SENIOR_CSV_BASE
 
 
 @dataclass
@@ -61,17 +86,21 @@ def _load_matrix_csv(path: Path, n: int) -> csr_matrix:
 
 
 def _load_step_npz(step: int, corr: int) -> SeniorBundle | None:
-    """Load from compact npz if present (preferred path)."""
-    p = SENIOR_NPZ_BASE / f"bundle_pd_{step:02d}_{corr}.npz"
-    if not p.exists():
-        return None
-    z = np.load(p)
-    n = int(z["n"][0])
-    A = csr_matrix(
-        (z["A_data"], z["A_indices"], z["A_indptr"]), shape=(n, n)
-    )
-    return SeniorBundle(A=A, b=z["b"], x_ref=z["x_ref"],
-                        step=step, corr=corr, n=n)
+    """Load from compact npz if present (preferred path).
+    Tries both 2-digit (initial) and 3-digit (evaporation) step padding.
+    """
+    for fname in (f"bundle_pd_{step:02d}_{corr}.npz",
+                  f"bundle_pd_{step:03d}_{corr}.npz"):
+        p = SENIOR_NPZ_BASE / fname
+        if p.exists():
+            z = np.load(p)
+            n = int(z["n"][0])
+            A = csr_matrix(
+                (z["A_data"], z["A_indices"], z["A_indptr"]), shape=(n, n)
+            )
+            return SeniorBundle(A=A, b=z["b"], x_ref=z["x_ref"],
+                                step=step, corr=corr, n=n)
+    return None
 
 
 def _load_step_csv(step: int, corr: int) -> SeniorBundle | None:
