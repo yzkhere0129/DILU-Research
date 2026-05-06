@@ -34,6 +34,22 @@ fi
 PYBIND_DIR="$($PYTHON_BIN -c 'import pybind11, sys; sys.stdout.write(pybind11.get_cmake_dir())')"
 echo "pybind11 cmake dir: $PYBIND_DIR"
 
+# Compiler selection.  If we're on a host where the Python headers live
+# under /usr/include/python3.X (Ubuntu/Debian system Python), the
+# multiarch shim there does `#include <x86_64-linux-gnu/python3.X/pyconfig.h>`
+# which only resolves with gcc that has /usr/include/x86_64-linux-gnu/ in
+# its default search path.  conda's gcc has its own sysroot and will fail
+# with "pyconfig.h: No such file or directory".  Prefer system gcc when
+# available unless the caller explicitly overrode CC/CXX.
+if [ -z "${CC:-}" ] && [ -x "/usr/bin/gcc" ]; then
+    export CC="/usr/bin/gcc"
+fi
+if [ -z "${CXX:-}" ] && [ -x "/usr/bin/g++" ]; then
+    export CXX="/usr/bin/g++"
+fi
+echo "CC : ${CC:-cmake-default}"
+echo "CXX: ${CXX:-cmake-default}"
+
 mkdir -p build
 cd build
 
