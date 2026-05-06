@@ -20,23 +20,39 @@ from __future__ import annotations
 import numpy as np
 from mpi4py import MPI
 
+from .. import _kernels_cpp as cpp
 from .decompose import LocalLDU
 
 
 def amul_mpi(local: LocalLDU, psi_local: np.ndarray,
               comm: MPI.Comm) -> np.ndarray:
-    """Apsi[local] = (A · psi_global)[local].  4-rank test passed."""
-    out = local.diag * psi_local
-    for f in range(local.n_local_faces):
-        o = local.owner[f]; n = local.neighbour[f]
-        out[n] += local.lower[f] * psi_local[o]
-        out[o] += local.upper[f] * psi_local[n]
+    """Apsi[local] = (A · psi_global)[local].
 
-    sends, recvs, send_bufs, recv_bufs = [], [], [], []
+    Local internal-face product uses the C++ kernel (10× faster than the
+    pure-Python face loop). Halo exchange uses mpi4py Isend/Irecv on the
+    small interface arrays.
+
+    Falls back to the Python loop if the C++ module is unavailable
+    (e.g., on lab machine before build.sh has run).
+    """
+    try:
+        out = cpp.amul(local.diag, local.lower, local.upper,
+                        local.owner, local.neighbour, psi_local)
+    except Exception:
+        # Fallback: Python face loop (slower, but no compiled .so dep).
+        out = local.diag * psi_local
+        for f in range(local.n_local_faces):
+            o = local.owner[f]; n = local.neighbour[f]
+            out[n] += local.lower[f] * psi_local[o]
+            out[o] += local.upper[f] * psi_local[n]
+
+    # Halo exchange: pack send buffers, post non-blocking Isend / Irecv,
+    # then add coeff * received to local Apsi at the interface cells.
+    sends, recvs, recv_bufs = [], [], []
     for h in local.halos:
         sb = np.ascontiguousarray(psi_local[h.local_cell])
         rb = np.empty_like(sb)
-        send_bufs.append(sb); recv_bufs.append(rb)
+        recv_bufs.append(rb)
         tag_s = (local.rank * local.n_ranks + h.other_rank) & 0xFFFF
         tag_r = (h.other_rank * local.n_ranks + local.rank) & 0xFFFF
         sends.append(comm.Isend(sb, dest=h.other_rank, tag=tag_s))
@@ -49,22 +65,55 @@ def amul_mpi(local: LocalLDU, psi_local: np.ndarray,
     return out
 
 
+def tmul_mpi(local: LocalLDU, psi_local: np.ndarray,
+              comm: MPI.Comm) -> np.ndarray:
+    """A^T·psi.  Same shape as amul_mpi but lower↔upper swapped on the
+    local face loop and on halo coefficients (halo coeff for tmul is the
+    OTHER rank's upper/lower, but for our 1D strip with symmetric A
+    this collapses; for asymmetric T eqn it requires a separate halo
+    that we'd build by mirroring a/b in decompose_1d). Skipped for now
+    since pd is symmetric and PCG only needs amul."""
+    try:
+        out = cpp.tmul(local.diag, local.lower, local.upper,
+                        local.owner, local.neighbour, psi_local)
+    except Exception:
+        out = local.diag * psi_local
+        for f in range(local.n_local_faces):
+            o = local.owner[f]; n = local.neighbour[f]
+            out[n] += local.upper[f] * psi_local[o]
+            out[o] += local.lower[f] * psi_local[n]
+
+    sends, recvs, recv_bufs = [], [], []
+    for h in local.halos:
+        sb = np.ascontiguousarray(psi_local[h.local_cell])
+        rb = np.empty_like(sb)
+        recv_bufs.append(rb)
+        tag_s = (local.rank * local.n_ranks + h.other_rank) & 0xFFFF
+        tag_r = (h.other_rank * local.n_ranks + local.rank) & 0xFFFF
+        sends.append(comm.Isend(sb, dest=h.other_rank, tag=tag_s))
+        recvs.append(comm.Irecv(rb, source=h.other_rank, tag=tag_r))
+    MPI.Request.Waitall(recvs)
+    for h, rb in zip(local.halos, recv_bufs):
+        np.add.at(out, h.local_cell, h.coeff * rb)
+    MPI.Request.Waitall(sends)
+    return out
+
+
 def sum_a_mpi(local: LocalLDU) -> np.ndarray:
     """sumA[local_i] = Σ_j A[global(local_i), j].
 
-    Each rank handles its own local-cells' row sums, taking contributions from:
-      - diag of local cell
-      - all internal-local face touches that local cell
-      - all halo-interface coefficients where local cell is the local endpoint
-    No comm needed — every cell only sees A's row, and we handle the local
-    cell-to-cell connections (face_loop + halo coeffs) on the local rank.
+    Each rank handles its own local-cells' row sums, no comm needed.
+    Uses C++ sum_a for the internal-face part when available.
     """
-    out = local.diag.copy()
-    # Internal faces (both endpoints local)
-    for f in range(local.n_local_faces):
-        out[local.neighbour[f]] += local.lower[f]
-        out[local.owner[f]]     += local.upper[f]
-    # Halo faces (each rank adds its own side's coefficient to its local cell)
+    try:
+        out = cpp.sum_a(local.diag, local.lower, local.upper,
+                         local.owner, local.neighbour)
+    except Exception:
+        out = local.diag.copy()
+        for f in range(local.n_local_faces):
+            out[local.neighbour[f]] += local.lower[f]
+            out[local.owner[f]]     += local.upper[f]
+    # Halo: each rank adds its own side's coefficient to its local cell
     for h in local.halos:
         np.add.at(out, h.local_cell, h.coeff)
     return out

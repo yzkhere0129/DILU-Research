@@ -74,54 +74,125 @@ def main():
         cases.extend(collect(name))
     print(f"  collected {len(cases)} dumps")
 
-    # Split by equation type
     eq_types = ["T_corr0", "pd_corr0", "pd_corr1", "pd_corr2"]
 
-    fig, axes = plt.subplots(1, 4, figsize=(18, 5), sharey=True)
-    for ax, eq in zip(axes, eq_types):
+    # Same color/marker convention as plot_truth_vs_senior.py:
+    #   blue  = our solver's distance to LU truth (= solver error)
+    #   orange = our solver vs OF reference (= OF's noise)
+    #   gray   = LU vs OF reference (also OF's noise; should overlap orange)
+    style = {
+        "PCG_LU": dict(color="tab:blue",   marker="o", linestyle="-"),
+        "PCG_OF": dict(color="tab:orange", marker="s", linestyle="-"),
+        "LU_OF":  dict(color="0.45",       marker="^", linestyle="--"),
+    }
+
+    fig = plt.figure(figsize=(18, 8))
+    gs = fig.add_gridspec(2, 4, height_ratios=[1.4, 1.0],
+                           hspace=0.35, wspace=0.3)
+
+    # Top row: per-equation precision lines
+    for col, eq in enumerate(eq_types):
+        ax = fig.add_subplot(gs[0, col])
         rows = [r for r in cases if r["eq"] == eq]
         if not rows:
-            ax.set_title(f"{eq}\n(no data)"); continue
+            ax.set_title(f"{eq}  (no data)", fontsize=10); continue
         x = np.arange(len(rows))
         rel_pcg_lu = np.array([r["rel_PCG_LU"] for r in rows])
         rel_pcg_of = np.array([r["rel_PCG_OF"] for r in rows])
         rel_lu_of  = np.array([r["rel_LU_OF"]  for r in rows])
 
-        ax.semilogy(x, np.maximum(rel_pcg_lu, 1e-17), "o-",
-                    label="rel(PCG, LU)  ← truth match",
-                    color="tab:blue", markersize=4)
-        ax.semilogy(x, np.maximum(rel_pcg_of, 1e-17), "s-",
-                    label="rel(PCG, OF)  ← OF tol noise",
-                    color="tab:orange", markersize=4)
-        ax.semilogy(x, np.maximum(rel_lu_of, 1e-17), "^--",
-                    label="rel(LU, OF)   ← also OF noise",
-                    color="tab:gray", markersize=4)
+        ax.semilogy(x, np.maximum(rel_pcg_lu, 1e-17),
+                     **style["PCG_LU"], markersize=5,
+                     label="rel(PCG, LU)  ← solver error")
+        ax.semilogy(x, np.maximum(rel_pcg_of, 1e-17),
+                     **style["PCG_OF"], markersize=5,
+                     label="rel(PCG, OF)  ← OF tol noise")
+        ax.semilogy(x, np.maximum(rel_lu_of, 1e-17),
+                     **style["LU_OF"], markersize=5,
+                     label="rel(LU, OF)   ← OF tol noise")
         ax.axhline(1e-15, color="green", linestyle=":", alpha=0.6,
-                   label="machine ε")
-        ax.axhline(1e-8, color="red", linestyle=":", alpha=0.6,
-                   label="OF tol")
-        ax.set_title(f"{eq} ({len(rows)} dumps)", fontsize=11)
+                    label="machine ε" if col == 0 else None)
+        ax.axhline(1e-8,  color="red",   linestyle=":", alpha=0.6,
+                    label="OF tol"     if col == 0 else None)
+
+        N_str = f"N={rows[0]['n']}"
+        ax.set_title(f"{eq} ({len(rows)} dumps, {N_str})", fontsize=10)
         ax.set_xlabel("dump index", fontsize=9)
+        if col == 0:
+            ax.set_ylabel("relative error (max-norm)", fontsize=9)
+            ax.legend(fontsize=7.5, loc="upper left")
         ax.set_ylim(1e-17, 1e-2)
         ax.grid(alpha=0.3, which="both")
-        if ax is axes[0]:
-            ax.set_ylabel("relative error (max-norm)")
-            ax.legend(fontsize=8, loc="upper left")
+
+    # Bottom-left: median bar chart per (eq × metric)
+    ax_bar = fig.add_subplot(gs[1, 0:2])
+    metrics = ["PCG_LU", "PCG_OF", "LU_OF"]
+    metric_labels = ["rel(PCG, LU)", "rel(PCG, OF)", "rel(LU, OF)"]
+    bar_x = np.arange(len(eq_types))
+    bar_w = 0.27
+    for i, m in enumerate(metrics):
+        meds = []
+        for eq in eq_types:
+            rs = [r for r in cases if r["eq"] == eq]
+            if rs:
+                meds.append(np.median([r[f"rel_{m}"] for r in rs]))
+            else:
+                meds.append(np.nan)
+        meds_safe = [max(v, 1e-17) for v in meds]
+        ax_bar.bar(bar_x + (i-1)*bar_w, meds_safe, bar_w,
+                    label=metric_labels[i],
+                    color=style[m]["color"], alpha=0.8)
+    ax_bar.set_yscale("log"); ax_bar.set_ylim(1e-17, 1e-2)
+    ax_bar.set_xticks(bar_x); ax_bar.set_xticklabels(eq_types)
+    ax_bar.set_ylabel("median relative error")
+    ax_bar.set_title("Median relative error by equation type", fontsize=10)
+    ax_bar.axhline(1e-15, color="green", linestyle=":", alpha=0.5)
+    ax_bar.axhline(1e-8,  color="red",   linestyle=":", alpha=0.5)
+    ax_bar.legend(fontsize=8, loc="upper right")
+    ax_bar.grid(alpha=0.3, axis="y", which="both")
+
+    # Bottom-right: summary text panel (same style as plot_truth_vs_senior)
+    ax_text = fig.add_subplot(gs[1, 2:4]); ax_text.axis("off")
+    lines = ["MEDIAN PRECISION ACROSS OUR OWN LPBF DUMPS",
+              "="*55,
+              f"{'equation':>14s} {'N':>6s} {'rel(PCG,LU)':>14s} "
+              f"{'rel(PCG,OF)':>14s} {'rel(LU,OF)':>14s}",
+              "-"*55]
+    for eq in eq_types:
+        rs = [r for r in cases if r["eq"] == eq]
+        if not rs: continue
+        N = rs[0]["n"]
+        m1 = np.median([r["rel_PCG_LU"] for r in rs])
+        m2 = np.median([r["rel_PCG_OF"] for r in rs])
+        m3 = np.median([r["rel_LU_OF"] for r in rs])
+        lines.append(f"{eq:>14s} {N:>6d} {m1:>14.2e} {m2:>14.2e} {m3:>14.2e}")
+    lines += ["",
+              "Reading the columns:",
+              "  rel(PCG, LU) — our solver's distance from LU truth",
+              "                 (≈ machine ε for T_corr0; ≈ 1e-9 for pd",
+              "                  due to PCG tol=1e-12 + κ amplification)",
+              "  rel(PCG, OF) — apparent gap to OF's reference x_final",
+              "  rel(LU, OF)  — same gap. Identical to PCG's because both",
+              "                 our PCG and LU agree to ~1e-9; OF reference",
+              "                 has its own tol=1e-8 truncation noise."]
+    ax_text.text(0.0, 1.0, "\n".join(lines),
+                  fontfamily="monospace", fontsize=9,
+                  verticalalignment="top")
 
     fig.suptitle(
         "Precision comparison: our PCG-DIC vs LU truth vs OpenFOAM reference\n"
-        "On OUR OWN dumps (LPBF_sanity 2K cells + dumper_pipeline_test 8K cells)",
-        fontsize=12)
-    fig.tight_layout()
+        "OUR OWN consistent dumps (LPBF_sanity 2K cells + dumper_pipeline_test 8K cells)",
+        fontsize=12, y=0.995)
     out = OUTDIR / "amgx_precision_vs_LU.png"
     fig.savefig(out, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"\n→ {out}")
 
-    # Also print the summary medians
+    # Console summary
     print()
     print("=" * 72)
-    print(f"{'eq':>10s}  {'N':>6s}  {'med rel(PCG,LU)':>15s}  {'med rel(PCG,OF)':>15s}  {'med rel(LU,OF)':>15s}")
+    print(f"{'eq':>10s}  {'N':>6s}  {'med rel(PCG,LU)':>15s}  "
+          f"{'med rel(PCG,OF)':>15s}  {'med rel(LU,OF)':>15s}")
     print("-" * 72)
     for eq in eq_types:
         rows = [r for r in cases if r["eq"] == eq]
@@ -130,7 +201,8 @@ def main():
         m_pcg_lu = np.median([r["rel_PCG_LU"] for r in rows])
         m_pcg_of = np.median([r["rel_PCG_OF"] for r in rows])
         m_lu_of  = np.median([r["rel_LU_OF"] for r in rows])
-        print(f"{eq:>10s}  {N:>6d}  {m_pcg_lu:>15.2e}  {m_pcg_of:>15.2e}  {m_lu_of:>15.2e}")
+        print(f"{eq:>10s}  {N:>6d}  {m_pcg_lu:>15.2e}  "
+              f"{m_pcg_of:>15.2e}  {m_lu_of:>15.2e}")
 
 
 if __name__ == "__main__":
