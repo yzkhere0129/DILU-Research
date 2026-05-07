@@ -31,25 +31,57 @@ from scipy.sparse import csr_matrix
 
 
 def parse_label_list(p: Path) -> np.ndarray:
-    """Read OF labelList format file → flat int64 array.
+    """Read OF labelList file → flat int64. Handles ASCII and binary formats.
 
-    Format:
+    ASCII layout:
       FoamFile {...}
       N
       (
       label_0
-      label_1
       ...
       )
+
+    Binary layout (arch=LSB;label=32):
+      FoamFile {...}      ← ASCII header
+      N\n                 ← ASCII count
+      (                   ← then raw int32 LE × N, then ')'
     """
-    text = p.read_text()
-    # find body between first '(' after FoamFile and last ')'
-    body_start = text.find("(", text.find("}"))
-    body_end = text.rfind(")")
-    if body_start < 0 or body_end < 0:
-        raise RuntimeError(f"can't parse {p}")
-    body = text[body_start + 1 : body_end]
-    return np.fromstring(body, sep=" ", dtype=np.int64)
+    raw = p.read_bytes()
+    # locate FoamFile dict close ('}')
+    head_end = raw.find(b"}")
+    if head_end < 0:
+        raise RuntimeError(f"no FoamFile in {p}")
+    header = raw[:head_end].decode("utf-8", errors="ignore")
+    is_binary = "format      binary" in header or "format binary" in header
+    label32 = "label=32" in header
+    # locate count line + opening paren after FoamFile dict
+    paren_open = raw.find(b"(", head_end)
+    if paren_open < 0:
+        raise RuntimeError(f"no '(' after FoamFile in {p}")
+    # parse N (ASCII) immediately preceding '('
+    pre = raw[head_end:paren_open]
+    n = int(pre.split()[-1])  # last whitespace-token before '(' is the count
+
+    if not is_binary:
+        # ASCII fast path
+        text = raw.decode("utf-8")
+        body_start = text.find("(", text.find("}"))
+        body_end = text.rfind(")")
+        body = text[body_start + 1 : body_end]
+        arr = np.fromstring(body, sep=" ", dtype=np.int64)
+        if arr.size != n:
+            raise RuntimeError(f"{p}: expected {n} labels, got {arr.size}")
+        return arr
+
+    # Binary path: int32 LE × N, immediately after '('
+    dtype = np.dtype("<i4") if label32 else np.dtype("<i8")
+    raw_bytes = dtype.itemsize * n
+    data_start = paren_open + 1
+    data = np.frombuffer(raw[data_start : data_start + raw_bytes], dtype=dtype)
+    if data.size != n:
+        raise RuntimeError(
+            f"{p}: binary parse expected {n} {dtype} labels, got {data.size}")
+    return data.astype(np.int64)
 
 
 def main():

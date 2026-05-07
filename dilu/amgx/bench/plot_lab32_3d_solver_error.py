@@ -33,18 +33,30 @@ OUTDIR = Path("/home/yzk/DILU-Research/docs/benchmark/figures")
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
 
-def load_phase(npz_path: Path) -> dict:
+def load_phase(npz_path: Path, mesh_override: tuple | None = None) -> dict:
     z = np.load(npz_path, allow_pickle=True)
     meta = json.loads(str(z["meta"][0]))
+    n = int(z["n"][0])
+    if mesh_override is not None:
+        nx, ny, nz, dx = mesh_override
+        if nx * ny * nz != n:
+            raise ValueError(
+                f"mesh-shape {nx}*{ny}*{nz}={nx*ny*nz} != N={n} from {npz_path}")
+        cid = np.arange(n, dtype=np.int64)
+        i = (cid % nx).astype(np.int32)
+        j = ((cid // nx) % ny).astype(np.int32)
+        k = (cid // (nx * ny)).astype(np.int32)
+    else:
+        nx = int(z["nx"][0]); ny = int(z["ny"][0]); nz = int(z["nz"][0])
+        dx = float(z["dx"][0])
+        i = z["i"]; j = z["j"]; k = z["k"]
     return dict(
         x_OF      = z["x_OF"],
         x_AMGx_e8 = z["x_AMGx_e8"],
         x_truth   = z["x_truth"],
         b         = z["b"],
-        i         = z["i"], j = z["j"], k = z["k"],
-        nx = int(z["nx"][0]), ny = int(z["ny"][0]), nz = int(z["nz"][0]),
-        dx = float(z["dx"][0]),
-        n  = int(z["n"][0]),
+        i = i, j = j, k = k,
+        nx = nx, ny = ny, nz = nz, dx = dx, n = n,
         meta = meta,
     )
 
@@ -209,15 +221,26 @@ def main():
     ap.add_argument("--melting", required=False)
     ap.add_argument("--evaporation", required=False)
     ap.add_argument("--out-name", default="amgx_3d_solver_error_lab32")
+    ap.add_argument("--mesh-shape", default=None,
+                     help="override (nx,ny,nz) e.g. '50,200,50'")
+    ap.add_argument("--dx", type=float, default=None,
+                     help="override cell size in meters")
     args = ap.parse_args()
+
+    mesh_override = None
+    if args.mesh_shape:
+        nx, ny, nz = [int(x) for x in args.mesh_shape.split(",")]
+        if args.dx is None:
+            raise SystemExit("--mesh-shape requires --dx")
+        mesh_override = (nx, ny, nz, args.dx)
 
     phases = []
     labels = []
     if args.melting:
-        phases.append(load_phase(Path(args.melting)))
+        phases.append(load_phase(Path(args.melting), mesh_override))
         labels.append("melting")
     if args.evaporation:
-        phases.append(load_phase(Path(args.evaporation)))
+        phases.append(load_phase(Path(args.evaporation), mesh_override))
         labels.append("evaporation")
     if not phases:
         raise SystemExit("Provide at least --melting or --evaporation")
