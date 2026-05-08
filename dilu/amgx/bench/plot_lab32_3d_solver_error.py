@@ -185,7 +185,7 @@ def render_timing_table(ax, phase_npzs, phase_labels):
         t = m["timings_s"]
         lines.append(
             f"{label:<14s} "
-            f"{t['reconstruct_s']*1e3:>10.1f} ms "
+            f"{t.get('reconstruct_s', 0)*1e3:>10.1f} ms "
             f"{m['amgx_truth']['t_setup_s']*1e3:>13.1f} ms "
             f"{m['amgx_truth']['t_solve_s']*1e3:>13.1f} ms "
             f"{m['amgx_e8']['t_setup_s']*1e3:>12.1f} ms "

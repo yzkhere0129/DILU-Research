@@ -42,7 +42,14 @@ from dilu.amgx.python import Plan, CLASSICAL_V_DIAGSCALED, with_tolerance
 from dilu.amgx.bench.sweep_amgx_senior_data import normalize_sign
 
 
-def amgx_solve(A_csr: csr_matrix, b: np.ndarray, *, tol: float, max_iter: int = 500):
+def amgx_solve(A_csr: csr_matrix, b: np.ndarray, *, tol: float,
+                max_iter: int = 2000, n_refine: int = 0):
+    """AMGx solve with optional iterative refinement steps.
+
+    n_refine>0: after primary solve, do `n_refine` additional solves of
+    A·δ = (b - A·x_k), x_{k+1} = x_k + δ. Mops up trailing residual at
+    O(extra ms) cost for matrices where AMGx stagnates near machine ε.
+    """
     cfg = with_tolerance(CLASSICAL_V_DIAGSCALED, tol, max_iters=max_iter)
     rp = jnp.asarray(A_csr.indptr.astype(np.int32))
     ci = jnp.asarray(A_csr.indices.astype(np.int32))
@@ -57,10 +64,22 @@ def amgx_solve(A_csr: csr_matrix, b: np.ndarray, *, tol: float, max_iter: int = 
         x.block_until_ready()
         t_solve = time.time() - t1
         x_h = np.asarray(x)
+
+        # Optional iterative refinement: reuse the same Plan
+        for k in range(n_refine):
+            r_h = b - A_csr @ x_h
+            r_d = jnp.asarray(r_h.astype(np.float64))
+            t2 = time.time()
+            dx, ir_iters, _ = plan.solve(r_d, jnp.zeros_like(r_d))
+            dx.block_until_ready()
+            t_solve += (time.time() - t2)
+            x_h = x_h + np.asarray(dx)
+
     rel = float(np.linalg.norm(A_csr @ x_h - b) / max(np.linalg.norm(b), 1e-300))
     return dict(x=x_h, iters=int(iters[0]), status=int(status[0]),
                 t_setup=t_setup, t_solve=t_solve,
-                rel_resid_actual=rel, tol_requested=tol)
+                rel_resid_actual=rel, tol_requested=tol,
+                n_refine=n_refine)
 
 
 def main():
@@ -99,12 +118,12 @@ def main():
     A_pos, b_pos, flipped = normalize_sign(A, b)
     print(f"  sign-flipped: {flipped}", flush=True)
 
-    # ---------- 2. AMGx truth ----------
-    print(f"\n[2/3] AMGx tol=1e-12 (truth) ...", flush=True)
-    res_truth = amgx_solve(A_pos, b_pos, tol=1e-12)
+    # ---------- 2. AMGx truth (high-iter + 1 IR) ----------
+    print(f"\n[2/3] AMGx tol=1e-12 + 1 IR (truth) ...", flush=True)
+    res_truth = amgx_solve(A_pos, b_pos, tol=1e-12, max_iter=2000, n_refine=1)
     timings["amgx_truth_setup_s"] = res_truth["t_setup"]
     timings["amgx_truth_solve_s"] = res_truth["t_solve"]
-    print(f"  iter={res_truth['iters']}  setup={res_truth['t_setup']*1e3:.1f}ms  "
+    print(f"  iter={res_truth['iters']}+1IR  setup={res_truth['t_setup']*1e3:.1f}ms  "
           f"solve={res_truth['t_solve']*1e3:.1f}ms  "
           f"rel_resid={res_truth['rel_resid_actual']:.2e}", flush=True)
 
