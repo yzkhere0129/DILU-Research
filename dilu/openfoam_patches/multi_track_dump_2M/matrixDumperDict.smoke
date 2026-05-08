@@ -1,0 +1,27 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      matrixDumperDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// SMOKE: dump at step 5 only (5 ns) to verify pipeline before 30h commit.
+
+enabled         true;
+binaryMM        false;
+outputDir       "postProcessing/matrices";
+
+dumpTimeSteps   (5);
+
+equations       (pd T);
+
+maxCorrectorsPerEq
+{
+    pd  3;
+    T   1;
+}
+
+// ************************************************************************* //

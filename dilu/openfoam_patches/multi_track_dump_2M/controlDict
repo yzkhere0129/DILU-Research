@@ -1,0 +1,54 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application       laserMeltFoam;
+
+startFrom         startTime;
+startTime         0;
+
+stopAt            endTime;
+endTime           1.2e-6;        // 1.2 μs (overnight 跑不完明天接续)
+
+deltaT            1e-9;          // 1 ns step
+writeControl      adjustableRunTime;
+writeInterval     2e-7;          // 200 ns 写一次场（节省 IO，单核 2M 慢得很）
+purgeWrite        0;
+writeFormat       binary;
+writePrecision    8;
+writeCompression  off;
+
+timeFormat        general;
+timePrecision     6;
+runTimeModifiable yes;
+
+adjustTimeStep    no;             // ★ step 索引可预测
+maxCo             0.5;
+maxAlphaCo        0.5;
+
+// === function objects: 记录每个 solver 的 wall + iter + residual ===
+functions
+{
+    solverInfo
+    {
+        type            solverInfo;
+        libs            (utilityFunctionObjects);
+        fields          (pd T U alpha.material);
+        writeControl    timeStep;
+        writeInterval   1;        // 每步都记
+    }
+}
+
+// ************************************************************************* //

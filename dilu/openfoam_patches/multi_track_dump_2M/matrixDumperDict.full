@@ -1,0 +1,31 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      matrixDumperDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+enabled         true;
+binaryMM        false;
+outputDir       "postProcessing/matrices";
+
+// 24 dump points: dense around melt formation (280-460 ns @ 20 ns spacing),
+// sparser in evap regime (500-1200 ns @ 50-100 ns).
+// dt = 1 ns → step index = ns
+dumpTimeSteps   (
+    50 100 150 200 250 280 300 320 340 360 380 400 420 440 460
+    500 550 600 700 800 900 1000 1100 1200
+);
+
+equations       (pd T);
+
+maxCorrectorsPerEq
+{
+    pd  3;
+    T   1;
+}
+
+// ************************************************************************* //
