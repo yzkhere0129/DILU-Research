@@ -1,0 +1,27 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      matrixDumperDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+enabled         true;
+binaryMM        false;            // ASCII MTX
+outputDir       "postProcessing/matrices";
+
+// step = time / dt = time / 1e-9 = time_in_ns
+// 6 dump points: melting (320/380/410 ns) + early evap (700/900/1060 ns)
+dumpTimeSteps   (320 380 410 700 900 1060);
+
+equations       (pd T);
+
+maxCorrectorsPerEq
+{
+    pd  3;
+    T   1;
+}
+
+// ************************************************************************* //

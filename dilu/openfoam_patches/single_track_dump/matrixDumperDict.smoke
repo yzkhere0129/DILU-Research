@@ -1,0 +1,28 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      matrixDumperDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// SMOKE TEST: dump at step 5 only (= 5 ns). Used by run_extraction.sh
+// to verify dump pipeline before committing to the 2-hour full run.
+
+enabled         true;
+binaryMM        false;
+outputDir       "postProcessing/matrices";
+
+dumpTimeSteps   (5);
+
+equations       (pd T);
+
+maxCorrectorsPerEq
+{
+    pd  3;
+    T   1;
+}
+
+// ************************************************************************* //
