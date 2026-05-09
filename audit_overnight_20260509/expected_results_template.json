@@ -1,0 +1,94 @@
+{
+  "doc": "Pre-registered predictions for Xeon validation. Each prediction has rationale.",
+  "predictions": [
+    {
+      "expt_id": "E01",
+      "metric": "approx_per_iter_ms (mean wall_per_step / mean total_iter_per_step × 1000)",
+      "predicted_value": 110,
+      "predicted_range": [50, 200],
+      "rationale": "PROJECT_STATUS_REPORT used 110 ms/iter (5s/step ÷ 45 iter/step). Layered estimation has 30% uncertainty per factor. Plausible range 50-200."
+    },
+    {
+      "expt_id": "E02",
+      "metric": "wall_seconds_mean (AMGx fresh single-shot, 500K LPBF pd, RTX 3050 dev OR RTX 5060 lab)",
+      "predicted_value": 20,
+      "predicted_range": [5, 50],
+      "rationale": "Existing npz meta shows 9-39s on dev RTX 3050. Lab 5060 may be 2-3x faster (8GB vs 4GB, sm_120 vs sm_86). Range 5-50."
+    },
+    {
+      "expt_id": "E03",
+      "metric": "step_1_to_N_mean_ms_amortized (excluding step 0 full setup)",
+      "predicted_value": 800,
+      "predicted_range": [50, 5000],
+      "rationale": "Hypothesis: update_coefficients ~ 50ms + solve ~ 100-1000ms. If solve dominates and unchanged from fresh, amortized doesn't help much. Predict update saves 1-3s setup overhead per step but solve still 5-20s."
+    },
+    {
+      "expt_id": "E03",
+      "metric": "speedup_amortized_vs_fresh (total wall ratio)",
+      "predicted_value": 1.5,
+      "predicted_range": [1.0, 5.0],
+      "rationale": "If setup is 2-3s and solve dominates at 5-20s per step, amortized saves only setup × (N-1) = ~10s out of N×solve = ~50-100s ⇒ 10-20% speedup. Far below the asserted 100-1000×."
+    },
+    {
+      "expt_id": "E04",
+      "metric": "iter_savings_warm_vs_cold_pct",
+      "predicted_value": 30,
+      "predicted_range": [0, 70],
+      "rationale": "LPBF physics has rapid alpha jumps; x_t may differ substantially from x_{t-1}. Warm-start could save 0-70% iter — large uncertainty."
+    },
+    {
+      "expt_id": "E04",
+      "metric": "similarity_x_t_vs_x_prev_max (rel ‖∞)",
+      "predicted_value": 0.05,
+      "predicted_range": [0.001, 0.5],
+      "rationale": "x evolves with melt pool; rel diff between adjacent timesteps probably 0.1-50%."
+    },
+    {
+      "expt_id": "E05",
+      "metric": "factor_seconds_mean (CHOLMOD fresh, 500K)",
+      "predicted_value": 70,
+      "predicted_range": [40, 150],
+      "rationale": "Conversation history showed 69-75s. Predict similar ±2x for cold-cache variance."
+    },
+    {
+      "expt_id": "E06",
+      "metric": "speedup_symbolic_reuse_vs_fresh (total wall ratio)",
+      "predicted_value": 1.5,
+      "predicted_range": [0.8, 5.0],
+      "rationale": "Symbolic part of cholesky is ~30-50% of factor cost; reuse saves that ⇒ 1.4-2× speedup. May fail (numerical issue with near-singular matrix) ⇒ ratio ≈ 1."
+    },
+    {
+      "expt_id": "E07",
+      "metric": "max_rel_max_AMGx_e12_IR_vs_LU (across 6 timesteps)",
+      "predicted_value": 1.13e-11,
+      "predicted_range": [1e-13, 1e-9],
+      "rationale": "Conversation history showed 1.13e-11. Range allows for numerical variance."
+    },
+    {
+      "expt_id": "E07",
+      "metric": "max_rel_max_OF_vs_LU (across 6 timesteps)",
+      "predicted_value": 3.5e-5,
+      "predicted_range": [1e-6, 1e-3],
+      "rationale": "OF tol=1e-8 × κ ~ 10^3-10^5 typical → 1e-5 to 1e-3. Conversation showed 3.47e-5."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "kappa_lab32_melt_380ns",
+      "predicted_value": 3.2e14,
+      "predicted_range": [1e10, 1e16],
+      "rationale": "Tonight's audit measured 3.2e14 via Lanczos shift-invert. Re-verify on Xeon with possibly different LAPACK/BLAS — expect within 1-2 orders of magnitude."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "kappa_single_track_melt_380ns",
+      "predicted_value": 1e10,
+      "predicted_range": [1e6, 1e16],
+      "rationale": "Different matrix from lab32 (rays>0 ≠ rays=0); expect lower κ since b is non-trivial. Wide range — true unknown."
+    }
+  ],
+  "comparison_method": {
+    "PASS": "value within predicted_range",
+    "MARGINAL": "value within 2× of range bounds",
+    "FAIL": "value outside 2× of range bounds — this is the interesting case (refutes hypothesis)"
+  }
+}
