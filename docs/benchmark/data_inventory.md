@@ -23,7 +23,29 @@ OpenFOAM 是 2004 年开源至今 20+ 年工业界 + 学术界使用的标准 CF
 - ❌ "OF 在 null-space 偏离 truth" — ill-posed 系统没 truth
 - ❌ "5.9 kPa 是 OF 的 artifact" — 是 ill-posed 系统的性质 (lab32 rays=0 case)
 
-**lab32 5.9 kPa 解读**：matrix + b ill-posed (rays=0 → b≈0 → A 近奇异 → 解在 null(A) 方向不唯一) → OF DICPCG 和 AMGx PCG 各自 land 到 null space 不同点 → **差 5.9 kPa 是两个迭代算法初值/路径选择差异**，**两个解都数学合法**。
+**lab32 5.9 kPa 解读** (2026-05-09 用 SuperLU 直解 settled，**之前的 ill-posed 解释错了**):
+
+✓ System **是良态的** (LU 给唯一解，残差 2.5e-15)
+✓ 5.9 kPa **不是 null-space artifact**
+
+实际原因 — 经典 PCG 数值分析：
+```
+cell error  ≤  κ(A_local) × residual / ‖A‖
+
+在 weakly diag-dominant cells (diag 1e-26 vs 1e-15) 上 κ_local ~ 1e6
+OF tol=1e-8 → residual ~ 1e-8 → cell error ~ 1e-2 × ‖x‖ = 5kPa ★
+AMGx tol=1e-12 + IR → residual ~ 1e-15 → cell error ~ 1e-9 × ‖x‖ = 0.004 Pa
+```
+
+实测 (`dilu/amgx/bench/lu_truth_lab32_settled.py`):
+
+| solver | tol | max \|x - x_LU\| | 病态 cells > 100 Pa |
+|---|---|---|---|
+| OF DICPCG | 1e-8 | **5914 Pa** (rel 4.7e-3) | 25 |
+| AMGx | 1e-8 | 28 Pa (rel 2.2e-5) | 0 |
+| AMGx + 1 IR | 1e-12 | **0.004 Pa** (rel 2.9e-9) | 0 |
+
+两个 solver **都没错** — 都满足各自 `tolerance` 设置。差异来自 condition number 把 residual 放大成 cell-level error，这是标准数值分析行为，不是 OF 或 AMGx 的 bug。**OF 设 `tolerance 1e-12` 也能到 AMGx 同等精度 — 默认 1e-8 是工程参数选择**。
 
 ---
 
