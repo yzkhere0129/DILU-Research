@@ -7,6 +7,26 @@
 
 ---
 
+## ⚠ DISCLAIMER — OpenFOAM 是业界标答，本文档不质疑 OF 正确性
+
+OpenFOAM 是 2004 年开源至今 20+ 年工业界 + 学术界使用的标准 CFD 工具，DICPCG/PBiCG/GAMG 等 solver 经过严格数值理论验证 + 千篇 peer-reviewed 论文检验。本仓库做的是**严格的、有限范围的、数值层面**的精度对比研究，不是 OF 的正确性审计。
+
+**严格能讲的**：
+1. AMGx 算法（CLASSICAL_V_DIAGSCALED + 1 IR）在 8K cells 上与 scipy LU 直解一致到机器精度（max rel diff 2.89e-15）— `precision_results_ir1.json`
+2. AMGx 默认 + IR 可以把 ‖A·x - b‖/‖b‖ 解到 1e-15
+3. OF DICPCG 默认 `tolerance 1e-8` 把残差停在 1e-8 — 这是 **case 工程参数**，不是 OF 算法限制
+4. matrix + b 良态时（real LPBF physics），OF 和 AMGx 一致到 rel ~1e-5
+
+**严格不能讲的**：
+- ❌ "OF 不准" — OF 准度由 case `tolerance` 设定决定
+- ❌ "AMGx 比 OF 准" — 不同 tolerance 选择
+- ❌ "OF 在 null-space 偏离 truth" — ill-posed 系统没 truth
+- ❌ "5.9 kPa 是 OF 的 artifact" — 是 ill-posed 系统的性质 (lab32 rays=0 case)
+
+**lab32 5.9 kPa 解读**：matrix + b ill-posed (rays=0 → b≈0 → A 近奇异 → 解在 null(A) 方向不唯一) → OF DICPCG 和 AMGx PCG 各自 land 到 null space 不同点 → **差 5.9 kPa 是两个迭代算法初值/路径选择差异**，**两个解都数学合法**。
+
+---
+
 ## A. 三台机器、三个数据来源、三种 solver — 一张速查地图
 
 ### 三台机器
