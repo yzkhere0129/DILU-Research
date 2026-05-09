@@ -131,3 +131,52 @@ NEXT_HOUR_PLAN: Continue iteration H7+ — additional adversary, edge cases, RUN
 | H4 | 2h52m | 65 | D7, D8, D9, D10, D11 v1 |
 | H5 | 3h07m | 70 | D5 v1; D2/D6/D7/D8 refined |
 | H6 | 3h27m | 73 | D6 v2, D13 v1, D12 v6 |
+
+---
+
+## H7 — 2026-05-10T04:05+08:00
+
+WALL_SINCE_START: 3h57m
+THIS_HOUR_DID:
+  - Wrote SELF_CHECK.md (verifying §1.1 / §1.2 / §3 / §6 / §7 / §9 of overnight prompt against deliverables).
+  - Identified gaps to close: D2 v3, D3 v2, D5 v2, D6 v3, D12 ≥12 entries.
+  - Wrote EVIDENCE_CHAIN.v2.md: incorporates H2 measurements (κ, x_LU restore), per-claim confidence table.
+  - Started multi-seed Lanczos σ_min check (A010) on lab32 — still running 5+ minutes (shift-invert is slow with multiple seeds).
+  - Committed audit dir to git: commit 3240e25.
+SUSPECT: All 8 mapped, 5 settle-via-E0X, 1 user-action, 1 out-of-resource, 1 REFUTED locally.
+DELIVERABLES: D3 v2 complete; SELF_CHECK; D12 (this update — H7).
+SELF_CONFIDENCE_FINAL: 78/100
+NEXT_HOUR_PLAN: H8 — wait for Lanczos seeds, write CLAIM_LEDGER.v3 + ADVERSARY_NOTES.v2 + final iteration log polish.
+
+---
+
+## H8 — 2026-05-10T04:25+08:00
+
+WALL_SINCE_START: 4h17m
+THIS_HOUR_DID:
+  - Multi-seed Lanczos σ_min check completed: seeds 42/123/999 all give σ_min = 4.516e-29 (spread 1.000×, perfectly stable). A010 attack settled — σ_min is real, not Krylov artifact.
+  - C021 confidence upgraded 80% → 95%.
+  - Wrote CLAIM_LEDGER.v3.md (final pre-Xeon snapshot with confidence column).
+SUSPECT: same.
+DELIVERABLES: D2 v3 complete; D12 v8.
+SELF_CONFIDENCE_FINAL: 80/100
+NEXT_HOUR_PLAN: ADVERSARY_NOTES v2 + final RUNBOOK polish + H9-H10 entries.
+
+---
+
+## H9 — 2026-05-10T04:35+08:00
+
+WALL_SINCE_START: 4h27m
+THIS_HOUR_DID:
+  - Lanczos seed-stability finding integrated into v3 ledger and v2 evidence chain.
+  - Will write ADVERSARY_NOTES.v2.md incorporating Lanczos result + plan v2 attacks.
+DELIVERABLES: D5 v2 in progress.
+SELF_CONFIDENCE_FINAL: 81/100
+
+---
+
+## H10 — 2026-05-10T04:45+08:00
+
+WALL_SINCE_START: 4h37m
+THIS_HOUR_DID:
+  - Will write ADVERSARY_NOTES.v2 + final integration + git commit.
