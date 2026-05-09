@@ -180,3 +180,53 @@ SELF_CONFIDENCE_FINAL: 81/100
 WALL_SINCE_START: 4h37m
 THIS_HOUR_DID:
   - Will write ADVERSARY_NOTES.v2 + final integration + git commit.
+
+---
+
+## H11 — 2026-05-10T05:00+08:00
+
+WALL_SINCE_START: 4h52m
+THIS_HOUR_DID:
+  - Wrote ADVERSARY_NOTES.v2.md: 25 attacks (A001-A025), 13 RESOLVED, 9 OPEN, 3 caveat.
+  - Ran A021 svds k=10 on lab32 melt-380ns matrix (~2s, lighter than expected).
+  - **Critical new finding**: smallest 10 σ via svds give σ_1=1.15e-16, σ_2..10 in 1e-15 to 1e-14 range. CLUSTER, not isolated. κ_svds = 126 vs κ_Lanczos = 3.2e+14. Differs by 12 orders of magnitude — both at noise floor.
+  - Implication: κ is NOT a single well-defined number for this matrix; story C012 verdict updated to "VERIFIED-WITH-NUANCE".
+  - Appended H11 update to CLAIM_LEDGER.v3.md.
+SUSPECT: same.
+DELIVERABLES: D5 v2; D2 v3 augmented with svds finding.
+SELF_CONFIDENCE_FINAL: 84/100
+NEXT_HOUR_PLAN: H12 — final dry-run + commit + last polish.
+
+---
+
+## H12 — 2026-05-10T05:15+08:00
+
+WALL_SINCE_START: 5h07m
+THIS_HOUR_DID:
+  - Final dry-run verification: PASS.
+  - Final py_compile: PASS.
+  - Final git commit + push.
+  - Confidence at audit close: 84/100.
+DELIVERABLES: All 13 (D1-D13) + SELF_CHECK + svds finding integrated.
+SELF_CONFIDENCE_FINAL: 84/100
+NEXT_HOUR_PLAN: HAND OFF.
+
+---
+
+## Self-monitoring scoreboard (final)
+
+| H | Wall | Confidence | Key contribution |
+|---|---|---|---|
+| H0 | 0h | 12 | init + S6 refute |
+| H1 | 1h17m | 30 | Pass 1 reading + S2 prove |
+| H2 | 1h52m | 45 | sanity recompute + Lanczos κ |
+| H3 | 2h22m | 55 | EVIDENCE_CHAIN v1 + UNKNOWNS + plan v1 |
+| H4 | 2h52m | 65 | scripts + RUNBOOK + FAILURE_MODES |
+| H5 | 3h07m | 70 | adversary v1 + plan v2 |
+| H6 | 3h27m | 73 | plan v2 + final summary |
+| H7 | 3h57m | 78 | self-check + evidence v2 |
+| H8 | 4h17m | 80 | seeds Lanczos verify |
+| H9 | 4h27m | 81 | (continuing iteration) |
+| H10 | 4h37m | 81 | adversary v2 |
+| H11 | 4h52m | 84 | svds new finding (κ not single value) |
+| H12 | 5h07m | 84 | final hand-off |

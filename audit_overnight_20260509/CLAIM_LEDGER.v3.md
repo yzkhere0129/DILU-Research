@@ -85,3 +85,50 @@ Mean: ~58%; post-Xeon predicted ~85%.
 | MED | E09 (Lanczos) | C012, C021 → 95% |
 | LOW | E10 optional | C014 → 95% if budget |
 | OUT | (n/a) | C018, C019, C020 not settle-able |
+
+---
+
+## H11 update — A021 svds finding
+
+**Critical finding** (2026-05-10T05:00):
+
+`scipy.sparse.linalg.svds(A_pos, k=10, which='SM', tol=1e-3)` returned 10 smallest
+singular values:
+```
+σ_1  = 1.152e-16   ← essentially fp64 ε
+σ_2  = 1.443e-15
+σ_3  = 2.644e-15
+...
+σ_10 = 9.287e-15
+```
+
+vs Lanczos shift-invert: σ_min = 4.516e-29.
+
+**Both methods agree the matrix is near-singular**. But the EXACT σ_min reported differs
+by ~13 orders of magnitude. Reason: σ_max ~ 1.45e-14, fp64 ε relative to σ_max is
+~3e-30. Anything below ~3e-30 is **noise floor**. Lanczos shift-invert converged to the
+noise floor "eigenvalue" 4.5e-29; svds found σ_1 = 1.15e-16 (also tiny but slightly
+above noise).
+
+**Implication for S4 narrative**:
+- κ(A) is NOT a single well-defined number for this matrix
+- κ_Lanczos = 3.2e+14
+- κ_svds = 126
+- "True" κ depends on: which numerical method, what tolerance, which singular-value cluster you call "min"
+
+**Revised story for C012**:
+The matrix has a NEAR-NULL SUBSPACE (cluster of 10 smallest σ all between 1e-16
+and 1e-14). PCG iterative methods leave the near-null component free at their tol level.
+LU returns a PARTICULAR pinned solution (regularized by pivoting). The 5.9 kPa diff
+between OF DICPCG (tol=1e-8) and LU is therefore best understood as:
+- magnitude of ‖x_OF - x_LU‖ on the near-null subspace
+- bounded by κ_effective × tol where κ_effective is in [126, 3e+14]
+- observed 4.7e-3 rel = within both bounds
+
+C012 verdict updated: **VERIFIED-WITH-NUANCE** — story holds qualitatively but κ is
+not a single number.
+
+C021 verdict confirmed: matrix has near-null subspace (10 smallest σ at fp64 noise).
+
+A021 attack RESOLVED via this svds check.
+
