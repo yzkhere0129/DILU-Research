@@ -121,15 +121,19 @@ def main():
         else:
             A_pos, b_pos = A, b
 
-        # Load AMGx solutions from npz
+        # Load AMGx solutions from npz (optional — degrade to OF-only if missing)
         npz_path = npz_dir / f"single_{phase}_pd_corr0_{t}.npz"
-        if not npz_path.exists():
-            print(f"  [warn] missing npz: {npz_path}")
-            continue
-        z = np.load(npz_path, allow_pickle=True)
-        x_AMGx_e8 = z["x_AMGx_e8"]
-        x_AMGx_e12 = z["x_truth"]
-        meta = json.loads(str(z["meta"][0]))
+        have_amgx = npz_path.exists()
+        if have_amgx:
+            z = np.load(npz_path, allow_pickle=True)
+            x_AMGx_e8 = z["x_AMGx_e8"]
+            x_AMGx_e12 = z["x_truth"]
+            meta = json.loads(str(z["meta"][0]))
+        else:
+            print(f"  [info] no npz at {npz_path.name} — comparing OF vs LU only")
+            x_AMGx_e8 = None
+            x_AMGx_e12 = None
+            meta = {}
 
         # LU direct solve
         print(f"  computing X_LU ...", flush=True)
@@ -140,10 +144,12 @@ def main():
               f"‖A·x_LU - b‖/‖b‖ = {res_LU:.3e}")
         denom = max(float(np.abs(x_LU).max()), 1e-300)
 
-        # Compare each solver to LU
+        # Compare each solver to LU (skip None entries)
         comparisons = {}
-        for name, x in [("x_OF", x_OF), ("x_AMGx_e8", x_AMGx_e8),
-                          ("x_AMGx_e12_IR", x_AMGx_e12)]:
+        compare_list = [("x_OF", x_OF)]
+        if have_amgx:
+            compare_list += [("x_AMGx_e8", x_AMGx_e8), ("x_AMGx_e12_IR", x_AMGx_e12)]
+        for name, x in compare_list:
             diff = np.abs(x - x_LU)
             comparisons[name] = {
                 "max_diff_Pa": float(diff.max()),
@@ -162,7 +168,7 @@ def main():
                   f"{r['rel_max']:>10.2e} {r['median_diff_Pa']:>11.3e} "
                   f"{r['cells_above_100Pa']:>8d} {r['cells_above_1kPa']:>7d}")
 
-        results.append({
+        record = {
             "timestep": t,
             "phase": phase,
             "n": int(n),
@@ -172,12 +178,14 @@ def main():
             "lu_rel_resid": res_LU,
             "x_LU_inf_norm": denom,
             "OF_dump_consistency": meta.get("rel_OF_consistency"),
-            "amgx_truth_iters": meta["amgx_truth"]["iters"],
-            "amgx_truth_rel_resid": meta["amgx_truth"]["rel_resid_actual"],
-            "amgx_e8_iters": meta["amgx_e8"]["iters"],
-            "amgx_e8_rel_resid": meta["amgx_e8"]["rel_resid_actual"],
             "comparisons_vs_LU": comparisons,
-        })
+        }
+        if have_amgx:
+            record["amgx_truth_iters"] = meta["amgx_truth"]["iters"]
+            record["amgx_truth_rel_resid"] = meta["amgx_truth"]["rel_resid_actual"]
+            record["amgx_e8_iters"] = meta["amgx_e8"]["iters"]
+            record["amgx_e8_rel_resid"] = meta["amgx_e8"]["rel_resid_actual"]
+        results.append(record)
 
     # Save JSON
     out_path = Path(args.out_json).expanduser()
@@ -190,27 +198,45 @@ def main():
     }, indent=2))
     print(f"\n→ Wrote {out_path}")
 
-    # Final cross-timestep summary
+    # Final cross-timestep summary (skip if no results)
+    if not results:
+        print(f"\n[no timesteps processed — check --case path]")
+        return
+
     print(f"\n{'='*100}")
     print(f"OVERALL SUMMARY (max over all {len(results)} timesteps)")
     print(f"{'='*100}")
-    for solver in ["x_OF", "x_AMGx_e8", "x_AMGx_e12_IR"]:
-        max_rel = max(r["comparisons_vs_LU"][solver]["rel_max"] for r in results)
-        max_abs = max(r["comparisons_vs_LU"][solver]["max_diff_Pa"] for r in results)
-        max_n100 = max(r["comparisons_vs_LU"][solver]["cells_above_100Pa"]
-                        for r in results)
-        print(f"  {solver:<18s}: max_rel={max_rel:.2e}, max_abs={max_abs:.2e} Pa, "
-              f"max cells > 100 Pa = {max_n100}")
+    # Collect every solver name actually present in any result
+    all_solvers = set()
+    for r in results:
+        all_solvers.update(r["comparisons_vs_LU"].keys())
+    for solver in sorted(all_solvers):
+        rels = [r["comparisons_vs_LU"][solver]["rel_max"] for r in results
+                if solver in r["comparisons_vs_LU"]]
+        absvs = [r["comparisons_vs_LU"][solver]["max_diff_Pa"] for r in results
+                if solver in r["comparisons_vs_LU"]]
+        n100s = [r["comparisons_vs_LU"][solver]["cells_above_100Pa"] for r in results
+                if solver in r["comparisons_vs_LU"]]
+        if not rels:
+            continue
+        print(f"  {solver:<18s}: max_rel={max(rels):.2e}, "
+              f"max_abs={max(absvs):.2e} Pa, max cells > 100 Pa = {max(n100s)}")
 
     print(f"\nVERDICT:")
-    amgx_e12_max = max(r["comparisons_vs_LU"]["x_AMGx_e12_IR"]["rel_max"]
-                        for r in results)
-    if amgx_e12_max < 1e-7:
-        print(f"  ★ AMGx + IR matches LU truth to rel<{amgx_e12_max:.0e} "
-              f"across all {len(results)} timesteps — AMGx is verified correct.")
+    if "x_AMGx_e12_IR" in all_solvers:
+        amgx_e12_max = max(r["comparisons_vs_LU"]["x_AMGx_e12_IR"]["rel_max"]
+                            for r in results
+                            if "x_AMGx_e12_IR" in r["comparisons_vs_LU"])
+        if amgx_e12_max < 1e-7:
+            print(f"  ★ AMGx + IR matches LU truth to rel<{amgx_e12_max:.0e} "
+                  f"across all {len(results)} timesteps — AMGx verified correct.")
+        else:
+            print(f"  ⚠ AMGx + IR max rel diff vs LU = {amgx_e12_max:.2e} — "
+                  f"larger than expected, investigate.")
     else:
-        print(f"  ⚠ AMGx + IR max rel diff vs LU = {amgx_e12_max:.2e} — "
-              f"larger than expected, investigate.")
+        print(f"  (no AMGx solutions in npz — only x_OF vs LU compared)")
+        of_max = max(r["comparisons_vs_LU"]["x_OF"]["rel_max"] for r in results)
+        print(f"  OF DICPCG max rel diff vs LU = {of_max:.2e} (= κ × OF tol scale)")
 
 
 if __name__ == "__main__":
