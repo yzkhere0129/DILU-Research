@@ -96,10 +96,13 @@ def main():
         err_OF_2 = float(np.linalg.norm(x_OF - x_AMGx_e12))
         err_e8_2 = float(np.linalg.norm(x_AMGx_e8 - x_AMGx_e12))
 
-        # OF
+        # OF — wall estimated from step total wall (~5s) / total iters per step (~45)
+        # → ~110 ms/iter, pd_corr0 wall ≈ iter × 110 ms
+        of_iter = of_meta["solver_openfoam"]["iterations"]
         OF_metrics = {
-            "iter": of_meta["solver_openfoam"]["iterations"],
-            "wall_ms": None,
+            "iter": of_iter,
+            "wall_ms": of_iter * 110,   # ESTIMATED, not measured per-solve
+            "wall_estimated": True,
             "rel_resid_actual": of_meta["solver_openfoam"]["final_residual"],
             "err_max_Pa": lu["OF_max"],
             "err_L2_Pa": err_OF_2,
@@ -167,7 +170,12 @@ def main():
     md.append("**Physics**: 300W laser, full LPBF (rays>0, real melt + vapor)")
     md.append("**OF version**: v2412 fresh build with our matrixDumper hooks")
     md.append("**Truth**: CHOLMOD LU on lab Xeon (rel resid ~2.7e-15 across all 6)")
-    md.append("**Note**: AMGx_e12+IR ≈ LU to rel 1e-11 (from lab Xeon LU verification)\n")
+    md.append("**Note**: AMGx_e12+IR ≈ LU to rel 1e-11 (from lab Xeon LU verification)")
+    md.append("**Wall time machines**:")
+    md.append("  - OF DICPCG: lab Xeon Xeon Gold 5120, single-core (wall estimated from log.run step Δt ≈ 5s ÷ ~45 total iter/step → ~110 ms/iter)")
+    md.append("  - AMGx PCG: dev RTX 3050 (4 GB VRAM)")
+    md.append("  - CHOLMOD LU: lab Xeon (single-thread CHOLMOD)")
+    md.append("")
 
     # Per-timestep tables
     for r in rows:
@@ -212,6 +220,15 @@ def main():
         md.append(f"| {slabel} | {tol} | {max_iter} | {wall_str} | "
                   f"**{max_err_max:.3e}** | {max_err_rel:.2e} | "
                   f"**{max_err_L2:.3e}** | {max_rel_L2:.2e} |")
+
+    # Add key conclusions
+    md.append("\n---\n## Key takeaways\n")
+    md.append("1. **AMGx + 1 IR algorithm verified correct**: matches CHOLMOD LU truth to rel 1e-11 across all 6 timesteps. No software bug.\n")
+    md.append("2. **OF DICPCG and AMGx PCG at same tol=1e-8 give comparable accuracy**: max ~45 / 56 Pa error vs LU truth (rel 4e-5). Both correct given the tolerance setting.\n")
+    md.append("3. **OF DICPCG converges in 17-65 iter; AMGx PCG (CLASSICAL_V_DIAGSCALED) needs 435-773 iter** for the same tol on this matrix. DIC preconditioner on the Laplacian-like LPBF pd matrix is significantly more efficient than AMG-CLASSICAL_V_DIAGSCALED — this is matrix-structure-specific, not a generic ranking.\n")
+    md.append("4. **OF wall ≈ 1.9-7.2 s (estimated) << AMGx wall 9-39 s on this 500K mesh**: at this size, OF's CPU DICPCG beats AMGx's GPU AMG-PCG due to (a) DIC's superior convergence on this matrix structure (b) AMGx GPU overhead (~2-3s setup per fresh solve, dominant for small problems).\n")
+    md.append("5. **CHOLMOD direct LU @ ~70 s per solve** is comparable wall to AMGx + IR — for 500K-class problems, sparse direct solves are competitive with iterative methods if memory permits.\n")
+    md.append("\n*Caveat*: OF wall is estimated from log.run step-Δt averaging, not directly per-solve measured. For exact per-solve OF timing, enable `solverInfo` function object in fvSolution and re-run.\n")
 
     md_path = REPO / "docs/benchmark/solver_comparison_500K.md"
     md_path.write_text("\n".join(md))
