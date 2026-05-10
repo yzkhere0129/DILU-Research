@@ -5,10 +5,16 @@ For each of 6 timesteps × N reps:
   - Plan(A) fresh setup
   - plan.solve(b, x0=0)
   - record setup_s, solve_s, iter, rel_resid
+
+Closeout fixes applied:
+  A005 — sync GPU before timer start (not just after solve)
+  A009 — gc.collect() + jax.clear_caches() between reps
+  A019 — record config_full_str = repr(cfg) in result.json
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import sys
 import time
@@ -103,6 +109,13 @@ def main():
             if args.resume and result_path.exists():
                 print(f"  rep {rep:02d}: SKIP (resume — exists)")
                 continue
+            # A009: gc + GPU cache clear between reps
+            gc.collect()
+            try:
+                import jax as _jax
+                _jax.clear_caches()
+            except Exception:
+                pass
             cold_cache()
 
             # Move data to GPU
@@ -111,6 +124,11 @@ def main():
             vv = jnp.asarray(A_pos.data.astype(np.float64))
             b_d = jnp.asarray(b_pos.astype(np.float64))
             x0_d = jnp.zeros_like(b_d)
+            # A005: sync GPU work before starting setup timer
+            try:
+                vv.block_until_ready()
+            except Exception:
+                pass
 
             with TimedSection() as outer:
                 t0 = time.perf_counter_ns()
@@ -144,6 +162,7 @@ def main():
                 "rel_resid_actual": res,
                 "tol_requested": 1e-8,
                 "config": {"name": "CLASSICAL_V_DIAGSCALED", "max_iters": 2000},
+                "config_full_str": repr(cfg),
                 "input_files": {
                     "A.mm": str(case_dir / "postProcessing/matrices" / time_str / "pd_corr0/A.mm"),
                     "b.mm": str(case_dir / "postProcessing/matrices" / time_str / "pd_corr0/b.mm"),

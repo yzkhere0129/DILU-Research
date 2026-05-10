@@ -1,10 +1,15 @@
 """E05 — CHOLMOD fresh refactor wall, ≥5 reps × 6 timesteps.
 
 Per-step: cholesky() full factor + solve. No reuse.
+
+Closeout fixes:
+  A009 gc.collect between reps
+  A019 method + version recorded in result.json
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import sys
@@ -69,6 +74,7 @@ def main():
             if args.resume and result_path.exists():
                 print(f"  rep{rep:02d}: SKIP"); continue
 
+            gc.collect()  # A009
             cold_cache()
             with TimedSection() as outer:
                 t0 = time.perf_counter_ns()
@@ -105,6 +111,7 @@ def main():
                 "nnz": int(A.nnz),
                 "sign_flipped": sf,
                 "env": env,
+                "config_full_str": f"method={method},mode=fresh_factor",  # A019
             }
             write_result_json(result_path, payload)
             print(f"  rep{rep:02d}: factor={factor_ns/1e6:.0f}ms solve={solve_ns/1e6:.0f}ms "

@@ -2,10 +2,13 @@
 
 Sequence-of-6 approach (mirroring E03/E04). 5 reps each.
 Watch for cholesky_inplace() failures (numerical issues) — record fallback to full.
+
+Closeout: A009 gc, A019 method recorded.
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import sys
@@ -65,6 +68,7 @@ def main():
         if args.resume and result_path.exists():
             print(f"\nrep{rep:02d}: SKIP"); continue
 
+        gc.collect()  # A009
         cold_cache()
         per_step = []
         factor = None
@@ -120,6 +124,7 @@ def main():
             "wall_seconds_method": "MEASURED:perf_counter_ns",
             "n_steps": len(matrices),
             "method": "CHOLMOD_symbolic_reuse",
+            "config_full_str": "method=CHOLMOD,mode=analyze_then_cholesky_inplace_per_step",  # A019
             "per_step": per_step,
             "warnings": warnings,
             "env": env,

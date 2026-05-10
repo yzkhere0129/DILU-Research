@@ -1,0 +1,122 @@
+{
+  "doc": "v2 — predictions tightened per A014 (closeout). Each prediction has rationale + tightening rationale.",
+  "version": "v2",
+  "predictions": [
+    {
+      "expt_id": "E01",
+      "metric": "approx_per_iter_ms (mean wall_per_step / mean total_iter_per_step × 1000)",
+      "predicted_value": 110,
+      "predicted_range": [80, 150],
+      "predicted_range_v1": [50, 200],
+      "rationale": "PROJECT_STATUS_REPORT used 110 ms/iter (5s/step ÷ 45 iter/step). Tightened from [50, 200] because the calculation is layered estimate, but the underlying log shows 5±0.5s/step in the early-phase data. Realistic range ±35%."
+    },
+    {
+      "expt_id": "E02",
+      "metric": "wall_seconds_median (AMGx fresh single-shot, 500K LPBF pd, lab GPU RTX 5060)",
+      "predicted_value": 12,
+      "predicted_range": [4, 25],
+      "predicted_range_v1": [5, 50],
+      "rationale": "Existing npz meta shows 9-39s on dev RTX 3050. Lab 5060 (sm_120, 8GB, newer) likely 1.5-3× faster ⇒ 5-25s. Tightened upper bound from 50 to 25 because if it's >25s on lab GPU, the wrapper has serious overhead and we should investigate."
+    },
+    {
+      "expt_id": "E03",
+      "metric": "step_1_to_N_mean_ms_amortized (excluding step 0 full setup)",
+      "predicted_value": 600,
+      "predicted_range": [200, 3000],
+      "predicted_range_v1": [50, 5000],
+      "rationale": "Hypothesis: update_coefficients ~30-100ms + solve at ~5-15s but reuse-of-hierarchy may speed convergence. Realistic range 0.2s (if amortization works well) to 3s (if mostly solve). Tightened from [50, 5000]."
+    },
+    {
+      "expt_id": "E03",
+      "metric": "speedup_amortized_vs_fresh (total wall ratio)",
+      "predicted_value": 1.5,
+      "predicted_range": [1.05, 2.5],
+      "predicted_range_v1": [1.0, 5.0],
+      "rationale": "If setup ≈ 2-3s out of single solve 10-25s, amortizing setup over 6 steps saves only (5×3s)/(6×15s) ≈ 17% ⇒ 1.2× speedup. Conservatively 1.05-2.5. Refutes 100-1000× claim from S1 — within this experiment alone."
+    },
+    {
+      "expt_id": "E04",
+      "metric": "iter_savings_warm_vs_cold_pct (across 5 step pairs)",
+      "predicted_value": 30,
+      "predicted_range": [10, 60],
+      "predicted_range_v1": [0, 70],
+      "rationale": "Tightened: in LPBF physics dominated by alpha jumps in <5% of cells, x_t-x_{t-1} similarity is high ⇒ warm-start should save 10-60% iter. Outside 10-60% would be surprising."
+    },
+    {
+      "expt_id": "E04",
+      "metric": "similarity_x_t_vs_x_prev_max (rel ‖∞)",
+      "predicted_value": 0.05,
+      "predicted_range": [0.005, 0.3],
+      "predicted_range_v1": [0.001, 0.5],
+      "rationale": "x evolves smoothly except at melt-front cells. Tightened upper to 30% (from 50%) — if >30% then warm-start is useless and the physics is even more chaotic than I think."
+    },
+    {
+      "expt_id": "E05",
+      "metric": "factor_seconds_median (CHOLMOD fresh, 500K, lab Xeon)",
+      "predicted_value": 70,
+      "predicted_range": [55, 95],
+      "predicted_range_v1": [40, 150],
+      "rationale": "Conversation history showed 69-75s. Tightened from [40, 150] to ±30% because we have 6 lab-Xeon CHOLMOD runs already (conversation paste) and they were tightly clustered."
+    },
+    {
+      "expt_id": "E06",
+      "metric": "speedup_symbolic_reuse_vs_fresh (total wall ratio)",
+      "predicted_value": 1.7,
+      "predicted_range": [1.2, 3.0],
+      "predicted_range_v1": [0.8, 5.0],
+      "rationale": "Tightened: symbolic part is ~30-50% of factor cost; reusing it should save that ⇒ 1.4-2× speedup. Lower bound 1.2× allows for some setup reuse but inplace overhead. If <1.2× then reuse is failing (numerical fallback). Upper 3× is generous for the case where matrix structure happens to be very symbolic-friendly."
+    },
+    {
+      "expt_id": "E07",
+      "metric": "max_rel_max_AMGx_e12_IR_vs_LU (across 6 timesteps)",
+      "predicted_value": 1.13e-11,
+      "predicted_range": [1e-12, 1e-10],
+      "predicted_range_v1": [1e-13, 1e-9],
+      "rationale": "Conversation history showed 1.13e-11. Tightened: anything <1e-12 or >1e-10 would mean either AMGx + IR is over-converging (impossible — bounded by fp64 floor) or the code has a bug."
+    },
+    {
+      "expt_id": "E07",
+      "metric": "max_rel_max_OF_vs_LU (across 6 timesteps)",
+      "predicted_value": 3.5e-5,
+      "predicted_range": [5e-6, 2e-4],
+      "predicted_range_v1": [1e-6, 1e-3],
+      "rationale": "Tightened: OF tol=1e-8 × κ_eff (~10^3-10^4 in well-conditioned subspace) → 1e-5 to 1e-4. Conversation showed 3.47e-5. If <5e-6 or >2e-4 then κ_eff is way off our model."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "kappa_lab32_melt_380ns_via_Lanczos_shift_invert",
+      "predicted_value": 3.2e14,
+      "predicted_range": [1e13, 1e15],
+      "predicted_range_v1": [1e10, 1e16],
+      "rationale": "Tonight's audit measured 3.2e14 with seed-stable Lanczos. Tightened to ±1 order of magnitude. If outside, Lanczos seed sensitivity returns or we have a numerical regression."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "kappa_single_track_melt_380ns_via_Lanczos_shift_invert",
+      "predicted_value": 1e10,
+      "predicted_range": [1e6, 1e14],
+      "predicted_range_v1": [1e6, 1e16],
+      "rationale": "Tightened upper from 1e16 to 1e14: single_track has rays>0 so b is non-trivial; expect κ smaller than lab32's 3.2e14. Wide range because we genuinely don't know — this is a NEW measurement."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "smallest_10_sigmas_lab32_via_svds (NEW per P8)",
+      "predicted_value": "[1e-16, 1e-15, 1e-15, 2e-15, 3e-15, 4e-15, 5e-15, 6e-15, 7e-15, 9e-15]",
+      "predicted_range": "all 10 below 1e-13 = near-null cluster confirmed",
+      "rationale": "Tonight's H11 svds gave [1.15e-16, 1.44e-15, ..., 9.29e-15]. Re-running on Xeon should give similar. Cluster (gap σ_2/σ_1 < 100) confirms near-null subspace structure."
+    },
+    {
+      "expt_id": "E09",
+      "metric": "smallest_10_sigmas_single_track_melt_380ns_via_svds (NEW per P8)",
+      "predicted_value": "TBD — first measurement",
+      "predicted_range": "no_near_null OR near_null_cluster (binary outcome)",
+      "rationale": "If single_track matrix is well-conditioned (rays>0 → physical b), σ_min should be 1e-10 to 1e-6, isolated. If it ALSO has near-null cluster, then near-null structure is universal to LPBF pd matrices regardless of physics — important for paper narrative."
+    }
+  ],
+  "comparison_method": {
+    "PASS": "value within predicted_range",
+    "MARGINAL": "value within 2× of range bounds",
+    "FAIL": "value outside 2× of range bounds — interesting case (refutes hypothesis or reveals bug)"
+  },
+  "tightening_rationale": "v1 ranges spanned 2-3 orders of magnitude in places, providing weak refutation power. v2 tightens to ranges that would actually reject hypotheses if measurement disagrees. New entries E09 svds (k=10) added per P8."
+}

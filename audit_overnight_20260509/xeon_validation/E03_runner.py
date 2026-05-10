@@ -8,10 +8,16 @@ Runs the entire 6-step sequence per rep:
     solve(b_i, x0=0) — record solve_ms[i]    # COLD INIT for E03 baseline
 
 Repeat ≥5 times. Sum across step gives realistic amortized total wall.
+
+Closeout fixes:
+  A005 — sync before timing starts
+  A009 — gc.collect() + jax.clear_caches() between reps
+  A019 — config_full_str in payload
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import sys
@@ -82,6 +88,13 @@ def main():
         if args.resume and result_path.exists():
             print(f"\nrep {rep:02d}: SKIP (resume)"); continue
 
+        # A009: clear python + jax caches between reps
+        gc.collect()
+        try:
+            import jax as _jax
+            _jax.clear_caches()
+        except Exception:
+            pass
         cold_cache()
         per_step = []
         plan = None
@@ -95,6 +108,11 @@ def main():
             b_d = jnp.asarray(b_pos.astype(np.float64))
             x0_d = jnp.zeros_like(b_d)
 
+            # A005: sync GPU before timing setup/update (avoid lingering work pollution)
+            try:
+                vv.block_until_ready()
+            except Exception:
+                pass
             t0 = time.perf_counter_ns()
             if plan is None:
                 # First step: full setup
@@ -146,6 +164,7 @@ def main():
             "tol_requested": 1e-8,
             "config": {"name": "CLASSICAL_V_DIAGSCALED", "max_iters": 2000,
                         "warm_start": False},
+            "config_full_str": repr(cfg),
             "per_step": per_step,
             "env": env,
         }

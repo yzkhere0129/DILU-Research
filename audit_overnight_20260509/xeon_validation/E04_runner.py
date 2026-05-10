@@ -1,10 +1,14 @@
 """E04 — AMGx amortized + warm-start. Same as E03 but solve(x0=x_prev).
 
 Also records similarity metric ‖x_t - x_{t-1}‖∞ / ‖x_t‖∞ for analysis.
+
+Closeout fixes:
+  A005 sync, A009 gc, A019 config_full_str.
 """
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import sys
@@ -73,6 +77,13 @@ def main():
         if args.resume and result_path.exists():
             print(f"\nrep {rep:02d}: SKIP"); continue
 
+        # A009
+        gc.collect()
+        try:
+            import jax as _jax
+            _jax.clear_caches()
+        except Exception:
+            pass
         cold_cache()
         per_step = []
         plan = None
@@ -94,6 +105,11 @@ def main():
                 x0_d = jnp.asarray(x_prev.astype(np.float64))
                 # similarity is computed AFTER we have current x — defer
 
+            # A005: sync GPU before timer start
+            try:
+                vv.block_until_ready()
+            except Exception:
+                pass
             t0 = time.perf_counter_ns()
             if plan is None:
                 plan = Plan(rp, ci, vv, cfg)
@@ -147,6 +163,7 @@ def main():
             "n_steps": len(matrices),
             "config": {"name": "CLASSICAL_V_DIAGSCALED", "max_iters": 2000,
                         "warm_start": True},
+            "config_full_str": repr(cfg),
             "per_step": per_step,
             "env": env,
         }

@@ -96,6 +96,30 @@ bash run_xeon_validation.sh --only=E01,E02,E03,E04,E05,E06,E07,E08,E09
 bash run_xeon_validation.sh --only=E07
 ```
 
+### IMPORTANT — E01 manual launch step (per A018 closeout)
+
+**E01_runner.py does NOT itself launch laserMeltFoam.** When invoked, it patches the
+controlDict with a `solverInfo` function block, then PRINTS instructions for the user
+to manually launch the OF simulation:
+
+```bash
+cd ~/cases/single_track_dump
+nohup laserMeltFoam > log.run 2>&1 &
+disown
+```
+
+Reason: spawning a 7-hour subprocess from inside a Python wrapper risks orphaned
+processes if the wrapper dies. The architecture deliberately separates "patch case
+and announce" (E01_runner.py) from "actually run OF" (manual user step). Once the
+laserMeltFoam run completes (or has run long enough), re-invoke:
+
+```bash
+bash run_xeon_validation.sh --only=E01 --skip-rerun=true
+```
+
+(or pass `--skip-rerun` to E01_runner.py directly), which then parses the produced
+`log.run` for OF wall measurement statistics.
+
 Watch progress in another terminal:
 ```bash
 tail -f xeon_validation/logs/*.log

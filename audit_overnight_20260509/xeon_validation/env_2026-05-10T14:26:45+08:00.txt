@@ -1,0 +1,78 @@
+=== Xeon Validation Environment ===
+Timestamp: 2026-05-10T14:26:45+08:00
+
+=== uname ===
+Linux Yzk-laptop 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+=== lscpu (head) ===
+Architecture:                         x86_64
+CPU op-mode(s):                       32-bit, 64-bit
+Address sizes:                        48 bits physical, 48 bits virtual
+Byte Order:                           Little Endian
+CPU(s):                               12
+On-line CPU(s) list:                  0-11
+Vendor ID:                            AuthenticAMD
+Model name:                           AMD Ryzen 5 5600H with Radeon Graphics
+CPU family:                           25
+Model:                                80
+Thread(s) per core:                   2
+Core(s) per socket:                   6
+Socket(s):                            1
+Stepping:                             0
+BogoMIPS:                             6587.46
+Flags:                                fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl tsc_reliable nonstop_tsc cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw topoext perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves clzero xsaveerptr arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload umip vaes vpclmulqdq rdpid fsrm
+Virtualization:                       AMD-V
+Hypervisor vendor:                    Microsoft
+Virtualization type:                  full
+L1d cache:                            192 KiB (6 instances)
+
+=== free ===
+               total        used        free      shared  buff/cache   available
+Mem:           9.7Gi       2.7Gi       6.8Gi       3.3Mi       453Mi       7.0Gi
+Swap:          8.0Gi        62Mi       7.9Gi
+
+=== nvidia-smi ===
+Sun May 10 14:26:45 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.76.04              Driver Version: 580.97         CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3050 ...    On  |   00000000:01:00.0  On |                  N/A |
+| N/A   54C    P8             10W /   95W |     773MiB /   4096MiB |     17%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+(no GPU)
+
+=== git ===
+f19184dbf8faec0db3ec0aaf64c471675b30e065
+
+=== Python ===
+/usr/bin/python3
+Python 3.12.3
+
+=== pip versions (key) ===
+numpy=1.26.4, scipy=1.11.4
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'sksparse'
+sksparse NOT INSTALLED
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ModuleNotFoundError: No module named 'dilu'
+AMGx wrapper FAIL
+
+=== OpenFOAM ===
+WM_PROJECT_VERSION=v2506
+/home/yzk/OpenFOAM/yzk-v2506/platforms/linux64GccDPInt32Opt/bin/laserMeltFoam
+
+=== experiments selected ===
+E02 E03 E04 E05 E06 E07 E08 E09
+
+=== flags ===
+DRY_RUN=1  SMOKE=0  RESUME=1  ONLY=''
