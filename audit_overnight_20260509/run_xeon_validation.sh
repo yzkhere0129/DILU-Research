@@ -70,6 +70,16 @@ export OPENBLAS_NUM_THREADS=1
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 
+# Allow `from dilu.amgx.python import Plan` from any CWD.
+# Detect repo root by walking up from script dir.
+REPO_ROOT="$(cd "$SCRIPT_DIR" && cd .. && pwd)"
+if [[ -d "$REPO_ROOT/dilu" ]]; then
+    export PYTHONPATH="$REPO_ROOT:${PYTHONPATH:-}"
+    echo "PYTHONPATH set to include $REPO_ROOT"
+else
+    echo "WARN: dilu module not found at $REPO_ROOT/dilu — runners may fail"
+fi
+
 # Environment snapshot
 TIMESTAMP=$(date -Iseconds)
 ENV_FILE="$RESULTS_DIR/env_${TIMESTAMP}.txt"
