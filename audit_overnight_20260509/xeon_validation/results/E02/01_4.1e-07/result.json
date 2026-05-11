@@ -1,0 +1,48 @@
+{
+  "expt_id": "E02",
+  "rep": 1,
+  "timestep": "4.1e-07",
+  "phase": "melting",
+  "started_at": "(captured by TimedSection)",
+  "wall_seconds": 4.055258022,
+  "wall_seconds_method": "MEASURED:perf_counter_ns",
+  "mem_peak_kb": 1467576,
+  "mem_peak_method": "MEASURED:resource.getrusage",
+  "setup_ns": 417901736,
+  "solve_ns": 3621349378,
+  "setup_ms": 417.901736,
+  "solve_ms": 3621.349378,
+  "iter_count": 549,
+  "status": 0,
+  "rel_resid_actual": 1.1980685015175964e-08,
+  "tol_requested": 1e-08,
+  "config": {
+    "name": "CLASSICAL_V_DIAGSCALED",
+    "max_iters": 2000
+  },
+  "config_full_str": "'{\"config_version\": 2, \"solver\": {\"scaling\": \"DIAGONAL_SYMMETRIC\", \"solver\": \"PCG\", \"preconditioner\": {\"solver\": \"AMG\", \"algorithm\": \"CLASSICAL\", \"smoother\": {\"scope\": \"jacobi\", \"solver\": \"BLOCK_JACOBI\", \"monitor_residual\": 0, \"print_solve_stats\": 0}, \"presweeps\": 1, \"postsweeps\": 1, \"interpolator\": \"D2\", \"max_iters\": 1, \"cycle\": \"V\", \"max_levels\": 50, \"monitor_residual\": 0, \"store_res_history\": 0, \"scope\": \"amg\", \"print_grid_stats\": 0, \"print_solve_stats\": 0}, \"max_iters\": 2000, \"tolerance\": 1e-08, \"convergence\": \"RELATIVE_INI_CORE\", \"norm\": \"L2\", \"monitor_residual\": 1, \"print_solve_stats\": 0, \"obtain_timings\": 0, \"store_res_history\": 0, \"scope\": \"main\"}}'",
+  "input_files": {
+    "A.mm": "/home/yzk/single_track_dump/postProcessing/matrices/4.1e-07/pd_corr0/A.mm",
+    "b.mm": "/home/yzk/single_track_dump/postProcessing/matrices/4.1e-07/pd_corr0/b.mm"
+  },
+  "input_md5s": {
+    "A.mm": "1ccf88dd016eab437891d628cee0cd27",
+    "b.mm": "6ac40a30a4db28b0a2eb96313bd714a1"
+  },
+  "n": 500000,
+  "nnz": 3455000,
+  "sign_flipped": true,
+  "env": {
+    "host": "Yzk-laptop",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cwd": "/home/yzk/DILU-Research/audit_overnight_20260509",
+    "git_commit": "66099c040e7c51a40f622e6b99e99bf44504abc7",
+    "numpy_version": "2.4.1",
+    "scipy_version": "1.17.0",
+    "sksparse_version": "missing",
+    "openblas_threads": "1",
+    "omp_num_threads": "1"
+  },
+  "warnings": []
+}

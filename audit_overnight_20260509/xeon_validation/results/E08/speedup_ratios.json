@@ -1,0 +1,8 @@
+{
+  "amgx_fresh_per_step_s_mean": 4.434394617,
+  "amgx_fresh_total_6step_estimate_s": 26.606367702,
+  "amgx_amortized_total_s_mean": 26.900437918,
+  "amortized_speedup_vs_fresh": 0.989068199674057,
+  "amgx_amortized_warm_total_s_mean": 16.193755528,
+  "warm_amortized_speedup_vs_fresh": 1.6430016901265398
+}

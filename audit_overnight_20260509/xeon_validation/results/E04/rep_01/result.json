@@ -1,0 +1,105 @@
+{
+  "expt_id": "E04",
+  "rep": 1,
+  "wall_seconds": 16.193755528,
+  "wall_seconds_method": "MEASURED:perf_counter_ns",
+  "n_steps": 6,
+  "config": {
+    "name": "CLASSICAL_V_DIAGSCALED",
+    "max_iters": 2000,
+    "warm_start": true
+  },
+  "config_full_str": "'{\"config_version\": 2, \"solver\": {\"scaling\": \"DIAGONAL_SYMMETRIC\", \"solver\": \"PCG\", \"preconditioner\": {\"solver\": \"AMG\", \"algorithm\": \"CLASSICAL\", \"smoother\": {\"scope\": \"jacobi\", \"solver\": \"BLOCK_JACOBI\", \"monitor_residual\": 0, \"print_solve_stats\": 0}, \"presweeps\": 1, \"postsweeps\": 1, \"interpolator\": \"D2\", \"max_iters\": 1, \"cycle\": \"V\", \"max_levels\": 50, \"monitor_residual\": 0, \"store_res_history\": 0, \"scope\": \"amg\", \"print_grid_stats\": 0, \"print_solve_stats\": 0}, \"max_iters\": 2000, \"tolerance\": 1e-08, \"convergence\": \"RELATIVE_INI_CORE\", \"norm\": \"L2\", \"monitor_residual\": 1, \"print_solve_stats\": 0, \"obtain_timings\": 0, \"store_res_history\": 0, \"scope\": \"main\"}}'",
+  "per_step": [
+    {
+      "step": 0,
+      "timestep": "3.2e-07",
+      "phase": "melting",
+      "setup_ms": 531.945805,
+      "update_ms": 0.0,
+      "solve_ms": 3981.206355,
+      "total_ms": 4513.15216,
+      "iter_count": 580,
+      "rel_resid": 9.954024485691574e-09,
+      "similarity_to_prev": null,
+      "warm_start_used": false
+    },
+    {
+      "step": 1,
+      "timestep": "3.8e-07",
+      "phase": "melting",
+      "setup_ms": 0.0,
+      "update_ms": 261.684774,
+      "solve_ms": 1173.343993,
+      "total_ms": 1435.028767,
+      "iter_count": 178,
+      "rel_resid": 1.112483562948605e-10,
+      "similarity_to_prev": 0.3329053576683321,
+      "warm_start_used": true
+    },
+    {
+      "step": 2,
+      "timestep": "4.1e-07",
+      "phase": "melting",
+      "setup_ms": 0.0,
+      "update_ms": 234.215233,
+      "solve_ms": 1873.841171,
+      "total_ms": 2108.056404,
+      "iter_count": 277,
+      "rel_resid": 1.4257463523935383e-11,
+      "similarity_to_prev": 0.3177666057378029,
+      "warm_start_used": true
+    },
+    {
+      "step": 3,
+      "timestep": "7e-07",
+      "phase": "evap_early",
+      "setup_ms": 0.0,
+      "update_ms": 242.560918,
+      "solve_ms": 2108.810847,
+      "total_ms": 2351.371765,
+      "iter_count": 312,
+      "rel_resid": 1.2829696884001496e-10,
+      "similarity_to_prev": 0.5221915084457136,
+      "warm_start_used": true
+    },
+    {
+      "step": 4,
+      "timestep": "9e-07",
+      "phase": "evap",
+      "setup_ms": 0.0,
+      "update_ms": 240.582781,
+      "solve_ms": 1337.897694,
+      "total_ms": 1578.480475,
+      "iter_count": 202,
+      "rel_resid": 2.397845762046326e-10,
+      "similarity_to_prev": 0.2905750765420359,
+      "warm_start_used": true
+    },
+    {
+      "step": 5,
+      "timestep": "1.06e-06",
+      "phase": "evap_late",
+      "setup_ms": 0.0,
+      "update_ms": 229.870412,
+      "solve_ms": 2097.678912,
+      "total_ms": 2327.549324,
+      "iter_count": 312,
+      "rel_resid": 2.5918658700447457e-10,
+      "similarity_to_prev": 0.3179866230916871,
+      "warm_start_used": true
+    }
+  ],
+  "env": {
+    "host": "Yzk-laptop",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cwd": "/home/yzk/DILU-Research/audit_overnight_20260509",
+    "git_commit": "66099c040e7c51a40f622e6b99e99bf44504abc7",
+    "numpy_version": "2.4.1",
+    "scipy_version": "1.17.0",
+    "sksparse_version": "missing",
+    "openblas_threads": "1",
+    "omp_num_threads": "1"
+  }
+}

@@ -1,5 +1,5 @@
-LAST_REVIEWED: 2026-05-11T20:00+08:00
-ITERATION: v2 (post-Xeon-smoke)
+LAST_REVIEWED: 2026-05-11T21:55+08:00
+ITERATION: v3 (post-Xeon-smoke + dev-AMGx-smoke)
 
 # What stands today — post Xeon smoke
 
@@ -115,11 +115,50 @@ C011's earlier 69-75 s claim came from a degenerate test matrix that had:
 Real-physics 500K LPBF pd ⇒ 405 s factor. **Do not extrapolate lab32 numbers
 to production.** Use lab32 only for sanity / correctness checks.
 
+### F6. AMGx warm-start gives 1.86× wall speedup on 6 sequential 500K LPBF pd matrices
+
+```
+On dev RTX 3050, AMGx 2.5.0 + CLASSICAL_V_DIAGSCALED PCG + 1 IR, tol=1e-8:
+
+mode                              wall (s, summed per_step)   PCG iter per step
+─────────────────────────────────────────────────────────────────────────────
+E02 fresh (1 setup + solve each)  26.61                       491,531,549,708,431,770
+E03 amortized cold (1 setup, 6×)  25.29                       496,523,545,685,430,856
+E04 amortized + warm-start         14.31                       580,178,277,312,202,312
+
+Speedup E04 vs E02 (per_step sum):    1.86×
+Speedup E04 vs E02 (wall_seconds):    1.64×   (includes Python startup ~1-2s)
+Speedup E03 vs E02 (amortize-only):   1.05×   ← amortizing setup buys ~nothing
+```
+
+**C016 VERIFIED**: warm-start iter reduction (mean step1+ vs step0 cold) = **55.8%**
+which falls inside v2 predicted range [10-60%].
+
+**C009 REFUTED-hard**: "amortized speedup 100-1000×" was wrong by 2 orders of
+magnitude. Real number: 1.05× (amortize-setup-alone) or 1.86× (amortize + warm).
+The win is warm-start, not amortizing setup.
+
+### F7. AMGx setup is ~500 ms not 2-3 s (C015 REFUTED)
+
+```
+E03 step0 setup_ms = 585       (NOT 2000-3000 ms hypothesized in C015)
+E03 step1-5 update_ms = 231-281
+E03 solve per step = 2870-5724 ms (depends on convergence)
+```
+
+Setup is 500 ms not seconds because the matrix sparsity pattern is fixed across
+timesteps — AMGx only needs to analyze the graph once at 500K, which takes ~half
+a second on RTX 3050. Update_coefficients is cheap (~250 ms = sparsity pattern reuse,
+new numerics). Solve dominates wall time.
+
 ## §2 Updated CLAIM_LEDGER amendments
 
 ```
 C004  AMGx+IR vs LU truth max rel ≤ 1.13e-11 on 500K       VERIFIED  (was HYPOTHESIS)
+C009  AMGx amortized 100-1000× speedup                     REFUTED-hard (was HYPOTHESIS)
 C011  CHOLMOD wall 69-75s on lab Xeon                       REFUTED-as-magnitude (was VERIFIED-CONDITIONAL)
+C015  AMGx setup 2-3s                                       REFUTED (was HYPOTHESIS — actual 500ms)
+C016  warm-start saves 10-60% iter                          VERIFIED (actual 55.8%)
 C017  CHOLMOD symbolic-reuse 2-5× speedup                  REFUTED   (was HYPOTHESIS)
 
 C022  AMGx+IR on 500K LPBF reaches LU truth rel 1e-11        NEW, VERIFIED
@@ -127,6 +166,8 @@ C023  OF DICPCG@1e-8 ≡ AMGx PCG@1e-8 to LU within 0.1 Pa     NEW, VERIFIED
 C024  CHOLMOD fresh per 500K factor = 405±2 s single-thread  NEW, VERIFIED
 C025  CHOLMOD symbolic-reuse SLOWER than fresh (sksparse 0.5.0)  NEW, VERIFIED
 C026  lab32 → production wall extrapolation off by 5×        NEW, VERIFIED
+C027  AMGx warm+amortized 1.86× wall vs fresh (RTX 3050)     NEW, VERIFIED
+C028  Amortize-setup-alone gives ≤5% benefit                 NEW, VERIFIED
 ```
 
 ## §3 Honest residuals — what is NOT YET resolved

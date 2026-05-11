@@ -1,0 +1,202 @@
+{
+  "expt_id": "E08",
+  "n_rows": 18,
+  "n_e02": 6,
+  "n_e03": 1,
+  "n_e04": 1,
+  "n_e05": 0,
+  "n_e06": 0,
+  "e07_summary": {},
+  "e09_summary": {},
+  "e01_present": false,
+  "headline_ratios": {
+    "amgx_fresh_per_step_s_mean": 4.434394617,
+    "amgx_fresh_total_6step_estimate_s": 26.606367702,
+    "amgx_amortized_total_s_mean": 26.900437918,
+    "amortized_speedup_vs_fresh": 0.989068199674057,
+    "amgx_amortized_warm_total_s_mean": 16.193755528,
+    "warm_amortized_speedup_vs_fresh": 1.6430016901265398
+  },
+  "rows": [
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "1.06e-06",
+      "phase": "evap_late",
+      "iter_count": 770,
+      "rel_resid": 1.0347668235023917e-08,
+      "wall_s": 5.567460276,
+      "step": -1
+    },
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "7e-07",
+      "phase": "evap_early",
+      "iter_count": 708,
+      "rel_resid": 1.1103938671907368e-08,
+      "wall_s": 5.150213805,
+      "step": -1
+    },
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "3.8e-07",
+      "phase": "melting",
+      "iter_count": 531,
+      "rel_resid": 1.2302839446055553e-08,
+      "wall_s": 4.062165561,
+      "step": -1
+    },
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "9e-07",
+      "phase": "evap",
+      "iter_count": 431,
+      "rel_resid": 1.1534529757523474e-08,
+      "wall_s": 3.399927204,
+      "step": -1
+    },
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "4.1e-07",
+      "phase": "melting",
+      "iter_count": 549,
+      "rel_resid": 1.1980685015175964e-08,
+      "wall_s": 4.055258022,
+      "step": -1
+    },
+    {
+      "expt": "E02",
+      "rep": 1,
+      "timestep": "3.2e-07",
+      "phase": "melting",
+      "iter_count": 491,
+      "rel_resid": 9.325283276867143e-09,
+      "wall_s": 4.371342834,
+      "step": -1
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 0,
+      "timestep": "3.2e-07",
+      "phase": "melting",
+      "iter_count": 496,
+      "rel_resid": 1.1245542643017392e-08,
+      "wall_s": 3.8833961439999998
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 1,
+      "timestep": "3.8e-07",
+      "phase": "melting",
+      "iter_count": 523,
+      "rel_resid": 1.2092210481292952e-08,
+      "wall_s": 3.713275396
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 2,
+      "timestep": "4.1e-07",
+      "phase": "melting",
+      "iter_count": 545,
+      "rel_resid": 1.3196993247289464e-08,
+      "wall_s": 3.8228969299999997
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 3,
+      "timestep": "7e-07",
+      "phase": "evap_early",
+      "iter_count": 685,
+      "rel_resid": 9.749275499101626e-09,
+      "wall_s": 4.807491731
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 4,
+      "timestep": "9e-07",
+      "phase": "evap",
+      "iter_count": 430,
+      "rel_resid": 1.2316506819280449e-08,
+      "wall_s": 3.1098976240000002
+    },
+    {
+      "expt": "E03",
+      "rep": 1,
+      "step": 5,
+      "timestep": "1.06e-06",
+      "phase": "evap_late",
+      "iter_count": 856,
+      "rel_resid": 1.0526636585416176e-08,
+      "wall_s": 5.957576218
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 0,
+      "timestep": "3.2e-07",
+      "phase": "melting",
+      "iter_count": 580,
+      "rel_resid": 9.954024485691574e-09,
+      "wall_s": 4.51315216
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 1,
+      "timestep": "3.8e-07",
+      "phase": "melting",
+      "iter_count": 178,
+      "rel_resid": 1.112483562948605e-10,
+      "wall_s": 1.435028767
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 2,
+      "timestep": "4.1e-07",
+      "phase": "melting",
+      "iter_count": 277,
+      "rel_resid": 1.4257463523935383e-11,
+      "wall_s": 2.108056404
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 3,
+      "timestep": "7e-07",
+      "phase": "evap_early",
+      "iter_count": 312,
+      "rel_resid": 1.2829696884001496e-10,
+      "wall_s": 2.3513717649999997
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 4,
+      "timestep": "9e-07",
+      "phase": "evap",
+      "iter_count": 202,
+      "rel_resid": 2.397845762046326e-10,
+      "wall_s": 1.578480475
+    },
+    {
+      "expt": "E04",
+      "rep": 1,
+      "step": 5,
+      "timestep": "1.06e-06",
+      "phase": "evap_late",
+      "iter_count": 312,
+      "rel_resid": 2.5918658700447457e-10,
+      "wall_s": 2.327549324
+    }
+  ]
+}
