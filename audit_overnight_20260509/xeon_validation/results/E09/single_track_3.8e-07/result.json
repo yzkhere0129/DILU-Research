@@ -1,0 +1,42 @@
+{
+  "expt_id": "E09",
+  "case": "single_track",
+  "phase": "melting",
+  "timestep": "3.8e-07",
+  "n": 500000,
+  "nnz": 3455000,
+  "sigma_max_lanczos": 2.9060824224875215e-14,
+  "sigma_min_lanczos": 1.6324646464512285e-29,
+  "kappa_lanczos": 1780180923859501.0,
+  "smallest_10_sigmas_svds": [
+    2.779207171691968e-15,
+    5.025435437906549e-15,
+    7.175729897197202e-15,
+    9.154177359020627e-15,
+    1.0977634677638565e-14,
+    1.2799351872774075e-14,
+    1.457545120929596e-14,
+    1.627098554393268e-14,
+    1.7890672579105352e-14,
+    1.9382400563353386e-14
+  ],
+  "has_near_null_subspace": true,
+  "near_null_dim_estimate": 10,
+  "diag_max": 1.705790937803669e-14,
+  "diag_min": 1.1999999912602412e-26,
+  "diag_spread": 1421492458522.6418,
+  "lanczos_wall_s": 2097.0863542556763,
+  "svds_wall_s": 2.025317668914795,
+  "env": {
+    "host": "HR54WV2",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cwd": "/home/yzk/DILU-Research/audit_overnight_20260509",
+    "git_commit": "66099c040e7c51a40f622e6b99e99bf44504abc7",
+    "numpy_version": "2.4.1",
+    "scipy_version": "1.17.0",
+    "sksparse_version": "0.5.0",
+    "openblas_threads": "1",
+    "omp_num_threads": "1"
+  }
+}
