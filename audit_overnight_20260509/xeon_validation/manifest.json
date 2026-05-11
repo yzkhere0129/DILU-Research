@@ -6,11 +6,11 @@
     "E05",
     "E06",
     "E07",
-    "E08",
-    "E09"
+    "E09",
+    "E08"
   ],
-  "started_at": "2026-05-10T14:30:08+08:00",
-  "env_file": "/home/yzk/DILU-Research/audit_overnight_20260509/xeon_validation/env_2026-05-10T14:30:08+08:00.txt",
+  "started_at": "2026-05-11T14:45:51+08:00",
+  "env_file": "/home/yzk/DILU-Research/audit_overnight_20260509/xeon_validation/env_2026-05-11T14:45:51+08:00.txt",
   "flags": {
     "dry_run": 1,
     "smoke": 0,

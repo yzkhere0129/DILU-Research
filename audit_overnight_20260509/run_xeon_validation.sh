@@ -55,8 +55,9 @@ while [[ $i -lt ${#args[@]} ]]; do
 done
 
 # All experiments (E01 default = laserMeltFoam-with-solverInfo, off by default;
-# enable explicitly via --only E01 because it takes 7 hours)
-DEFAULT_EXPERIMENTS="E02 E03 E04 E05 E06 E07 E08 E09"
+# enable explicitly via --only E01 because it takes 7 hours).
+# E08 must run AFTER E09 because E08 aggregates E09's results (smoke run revealed this bug).
+DEFAULT_EXPERIMENTS="E02 E03 E04 E05 E06 E07 E09 E08"
 ALL_EXPERIMENTS="E01 $DEFAULT_EXPERIMENTS E10 E11 E12"
 
 if [[ -n "$ONLY" ]]; then
@@ -151,6 +152,18 @@ if [[ "$EXPS" == *"E01"* ]]; then
         echo "FAIL: E01 selected but OF_CASE=$OF_CASE has no postProcessing/matrices"
         SANITY_FAIL=1
     fi
+fi
+
+# AMGx .so existence check (Python import != .so present — dry-run missed this before)
+# Only WARN, not FAIL: E05/E06/E07/E08/E09 don't need AMGx, only E02/E03/E04 do.
+AMGX_SO="$REPO_ROOT/dilu/amgx/build/libdilu_amgx.so"
+if [[ -n "${REPO_ROOT:-}" ]] && [[ ! -f "$AMGX_SO" ]]; then
+    case "$EXPS" in
+        *E02*|*E03*|*E04*)
+            echo "WARN: $AMGX_SO not found — E02/E03/E04 will fail."
+            echo "      Build it via:  cd $REPO_ROOT/dilu/amgx && bash build.sh"
+            echo "      OR skip AMGx experiments: --only=E05,E06,E07,E09,E08" ;;
+    esac
 fi
 
 # Write permission test

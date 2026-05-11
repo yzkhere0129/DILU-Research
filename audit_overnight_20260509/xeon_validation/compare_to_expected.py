@@ -107,8 +107,19 @@ def main():
             if agg.exists():
                 d = json.loads(agg.read_text())
                 for r in d.get("results", []):
-                    summary.append(f"  {r['case']:<14s} {r['phase']:<10s} t={r['timestep']}: "
-                                    f"κ={r['kappa']:.3e}")
+                    # E09 stores kappa_lanczos + smallest_10_sigmas_svds (P8 upgrade).
+                    kappa = r.get("kappa_lanczos", r.get("kappa"))
+                    sigma_min = r.get("sigma_min_lanczos")
+                    near_null = r.get("has_near_null_subspace")
+                    bits = []
+                    if kappa is not None:
+                        bits.append(f"κ_L={kappa:.3e}")
+                    if sigma_min is not None:
+                        bits.append(f"σ_min={sigma_min:.3e}")
+                    if near_null is not None:
+                        bits.append(f"near_null={near_null}")
+                    summary.append(f"  {r.get('case','?'):<14s} {r.get('phase','?'):<10s} "
+                                    f"t={r.get('timestep','?')}: " + "  ".join(bits))
 
     # Compare to expected
     summary.append("\n---\n## Comparison to expected\n")

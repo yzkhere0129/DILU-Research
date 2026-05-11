@@ -35,12 +35,21 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     npz_dir = Path(args.npz_dir)
 
+    # sksparse 0.5.0: cholesky() returns (R, p) tuple; use cho_factor + .solve.
     try:
-        from sksparse.cholmod import cholesky
+        from sksparse.cholmod import cho_factor as _sks_factor_fn
+        def _sks_factor(Acsc): return _sks_factor_fn(Acsc)
+        def _sks_solve(f, b): return f.solve(b)
+        _have_sksparse = True
     except ImportError:
-        # Fall back to scipy SuperLU but warn
-        from scipy.sparse.linalg import spsolve
-        cholesky = None
+        try:
+            from sksparse.cholmod import cholesky as _sks_legacy
+            def _sks_factor(Acsc): return _sks_legacy(Acsc)
+            def _sks_solve(f, b): return f(b)
+            _have_sksparse = True
+        except ImportError:
+            from scipy.sparse.linalg import spsolve
+            _have_sksparse = False
 
     case_dir_candidates = [
         Path("/home/yzk/cases/single_track_dump"),
@@ -73,9 +82,9 @@ def main():
 
         # LU truth
         t0 = time.perf_counter_ns()
-        if cholesky is not None:
-            factor = cholesky(A_pos.tocsc())
-            x_LU = factor(b_pos)
+        if _have_sksparse:
+            factor = _sks_factor(A_pos.tocsc())
+            x_LU = _sks_solve(factor, b_pos)
             method = "CHOLMOD"
         else:
             from scipy.sparse.linalg import spsolve

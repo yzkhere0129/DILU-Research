@@ -38,10 +38,24 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     npz_dir = Path(args.npz_dir)
 
+    # sksparse 0.5.0: cholesky() returns (R, p) tuple; use cho_factor.
+    # symbolic-reuse path:  CholeskyFactor.factorize(A_new) (was cholesky_inplace pre-0.5.0).
+    _API = None
     try:
-        from sksparse.cholmod import cholesky
+        from sksparse.cholmod import cho_factor as _sks_factor_fn
+        def _sks_factor(Acsc): return _sks_factor_fn(Acsc)
+        def _sks_solve(f, b): return f.solve(b)
+        def _sks_refactor(f, Acsc): f.factorize(Acsc); return f
+        _API = "0.5.0"
     except ImportError:
-        sys.exit("FAIL: sksparse not available. E06 requires CHOLMOD. Install scikit-sparse.")
+        try:
+            from sksparse.cholmod import cholesky as _sks_legacy
+            def _sks_factor(Acsc): return _sks_legacy(Acsc)
+            def _sks_solve(f, b): return f(b)
+            def _sks_refactor(f, Acsc): f.cholesky_inplace(Acsc); return f
+            _API = "pre-0.5.0"
+        except ImportError:
+            sys.exit("FAIL: sksparse not available. E06 requires CHOLMOD. Install scikit-sparse.")
 
     case_dir_candidates = [
         Path("/home/yzk/cases/single_track_dump"),
@@ -78,26 +92,26 @@ def main():
         for i, m in enumerate(matrices):
             t0 = time.perf_counter_ns()
             if factor is None:
-                factor = cholesky(m["A_csc"])
+                factor = _sks_factor(m["A_csc"])
                 factor_ns = time.perf_counter_ns() - t0
                 refact_ns = 0
                 method_used = "full_factor"
             else:
-                # Try inplace; on failure fall back to full
+                # Try numeric-reuse refactor; on failure fall back to full new factor.
                 try:
-                    factor.cholesky_inplace(m["A_csc"])
+                    factor = _sks_refactor(factor, m["A_csc"])
                     refact_ns = time.perf_counter_ns() - t0
                     factor_ns = 0
-                    method_used = "cholesky_inplace"
+                    method_used = "symbolic_reuse_refactor"
                 except Exception as e:
-                    warnings.append(f"step {i}: cholesky_inplace fail: {e}")
-                    factor = cholesky(m["A_csc"])
+                    warnings.append(f"step {i}: refactor fail: {e}")
+                    factor = _sks_factor(m["A_csc"])
                     factor_ns = time.perf_counter_ns() - t0
                     refact_ns = 0
                     method_used = "fallback_full"
 
             t1 = time.perf_counter_ns()
-            x = factor(m["b"])
+            x = _sks_solve(factor, m["b"])
             solve_ns = time.perf_counter_ns() - t1
             res = float(np.linalg.norm(m["A_csr"] @ x - m["b"]) /
                         max(np.linalg.norm(m["b"]), 1e-300))
@@ -124,7 +138,8 @@ def main():
             "wall_seconds_method": "MEASURED:perf_counter_ns",
             "n_steps": len(matrices),
             "method": "CHOLMOD_symbolic_reuse",
-            "config_full_str": "method=CHOLMOD,mode=analyze_then_cholesky_inplace_per_step",  # A019
+            "sksparse_api": _API,
+            "config_full_str": f"method=CHOLMOD,mode=cho_factor_then_factorize_per_step,api={_API}",  # A019
             "per_step": per_step,
             "warnings": warnings,
             "env": env,
