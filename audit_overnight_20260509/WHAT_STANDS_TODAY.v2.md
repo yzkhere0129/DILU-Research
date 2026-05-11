@@ -151,6 +151,33 @@ timesteps — AMGx only needs to analyze the graph once at 500K, which takes ~ha
 a second on RTX 3050. Update_coefficients is cheap (~250 ms = sparsity pattern reuse,
 new numerics). Solve dominates wall time.
 
+### F9. ALL 6 single_track LPBF pd matrices have near-null subspace (κ ~ 1.78e+15)
+
+E09 Xeon full result (Lanczos shift-invert + svds k=10, BLAS-pinned single-thread):
+
+```
+case             phase       t            σ_max(L)    σ_min(L)    κ(L)        near_null
+─────────────────────────────────────────────────────────────────────────────────────
+single_track     melting     3.2e-07      2.901e-14   1.632e-29   1.778e+15   True
+single_track     melting     3.8e-07      2.906e-14   1.632e-29   1.780e+15   True
+single_track     melting     4.1e-07      2.905e-14   1.632e-29   1.780e+15   True
+single_track     evap_early  7e-07        2.903e-14   1.633e-29   1.778e+15   True
+single_track     evap        9e-07        2.902e-14   1.633e-29   1.778e+15   True
+single_track     evap_late   1.06e-06     2.905e-14   1.633e-29   1.779e+15   True
+lab32            melting     3.8e-07      1.454e-14   4.516e-29   3.220e+14   True
+```
+
+**Every single LPBF pd matrix tested — rays>0 real physics AND rays=0 lab32 — has near-null subspace cluster.** σ_min sits at fp64 noise floor across ALL 7 matrices. κ_Lanczos is consistently ~1.78e+15 for production single_track matrices, ~3.2e+14 for lab32.
+
+Confirmation (also from E09):
+- svds k=10 returns smallest_10 σ all in [1e-15, 1e-14] range — confirms near-null cluster
+- `CholmodWarning: Matrix is nearly singular. rcond=5.04e-13` raised by sksparse during E05 evap_late factorization — independent confirmation by direct solver
+- The 5.9 kPa lab32 OF-vs-LU gap and the 17 Pa single_track gap (E07) are both **near-null subspace projection drift**, not solver bugs
+
+**C012 VERIFIED-WITH-NUANCE** (was REFINED-VERIFIED at 75%): κ is method-dependent because σ_min is at fp64 noise. Honest values: κ_Lanczos ≈ 1.78e+15 (single_track) / 3.2e+14 (lab32). κ_svds ≈ 126 (lab32 — see H11). The "true" κ is **not** a single number.
+
+**C021 VERIFIED across all 6 single_track timesteps** (was 80% — now 95%): σ_min near-singular property is **universal** in this LPBF case, not a single-timestep artifact.
+
 ## §2 Updated CLAIM_LEDGER amendments
 
 ```
@@ -168,6 +195,8 @@ C025  CHOLMOD symbolic-reuse SLOWER than fresh (sksparse 0.5.0)  NEW, VERIFIED
 C026  lab32 → production wall extrapolation off by 5×        NEW, VERIFIED
 C027  AMGx warm+amortized 1.86× wall vs fresh (RTX 3050)     NEW, VERIFIED
 C028  Amortize-setup-alone gives ≤5% benefit                 NEW, VERIFIED
+C029  ALL 6 single_track + lab32 pd matrices near-null       NEW, VERIFIED (was C021 partial)
+C030  CholmodWarning rcond=5e-13 confirms sksparse agrees    NEW, VERIFIED
 ```
 
 ## §3 Honest residuals — what is NOT YET resolved

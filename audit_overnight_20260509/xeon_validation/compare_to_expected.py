@@ -12,15 +12,16 @@ import numpy as np
 
 
 def collect_e02(rep_dir: Path):
+    """Iter count is PCG-only — direct solvers (E05 CHOLMOD) don't have it."""
     walls = []; iters = []; resids = []
     for r in rep_dir.iterdir():
         if not r.is_dir(): continue
         rj = r / "result.json"
         if not rj.exists(): continue
         d = json.loads(rj.read_text())
-        walls.append(d["wall_seconds"])
-        iters.append(d["iter_count"])
-        resids.append(d["rel_resid_actual"])
+        walls.append(d.get("wall_seconds", -1))
+        iters.append(d.get("iter_count", -1))  # E05 direct solve has no iter
+        resids.append(d.get("rel_resid_actual", -1))
     return walls, iters, resids
 
 
