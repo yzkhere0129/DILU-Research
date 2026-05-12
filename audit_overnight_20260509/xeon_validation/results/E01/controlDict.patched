@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application       laserMeltFoam;
+
+startFrom         latestTime;
+startTime         0;
+
+stopAt            endTime;
+endTime           1.5e-6;        // 1.2 μs (melting + 早期 evap)
+
+deltaT            1e-9;          // 1 ns step (acoustic-CFL safe)
+
+writeControl      adjustableRunTime;
+writeInterval     1e-7;          // 100 ns 写一次场量
+purgeWrite        0;
+writeFormat       binary;
+writePrecision    8;
+writeCompression  off;
+
+timeFormat        general;
+timePrecision     6;
+runTimeModifiable yes;
+
+adjustTimeStep    no;             // ★ 关键: step 索引可预测
+maxCo             0.5;
+maxAlphaCo        0.5;
+
+// ************************************************************************* //
+
+// === E01 timing instrumentation (audit_overnight_20260509, 2026-05-12) ===
+functions
+{
+    solverInfo
+    {
+        type            solverInfo;
+        libs            (utilityFunctionObjects);
+        fields          (pd T);
+        writeResidualFields off;
+        executeControl  timeStep;
+        executeInterval 1;
+        writeControl    timeStep;
+        writeInterval   1;
+    }
+}
