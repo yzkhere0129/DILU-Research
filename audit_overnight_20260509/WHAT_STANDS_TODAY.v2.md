@@ -65,7 +65,32 @@ Both 1e-8 solvers are equivalent in production precision. The ~10 Pa magnitude
 of disagreement to LU truth is the **near-null subspace projection** revealed
 by E09 svds finding (H11) — not a "solver error" in the traditional sense.
 
-### F3. CHOLMOD fresh factor on single-thread Xeon = 405 ± 2 s per 500K factor
+### F3. CHOLMOD fresh factor on single-thread Xeon = 415–433 s per 500K factor (5-rep)
+
+(F3 update with 5-rep variance after E05/E06 multi-rep complete 2026-05-12)
+
+```
+5-rep stats per timestep:
+  melting     3.2e-07     mean 415.5 ± 9.2 s    CV 2.2%
+  melting     3.8e-07     mean 431.2 ± 16.6 s   CV 3.8%
+  melting     4.1e-07     mean 430.0 ± 14.7 s   CV 3.4%
+  evap_early  7e-07       mean 426.3 ± 17.4 s   CV 4.1%
+  evap        9e-07       mean 433.1 ± 19.0 s   CV 4.4%
+  evap_late   1.06e-06    mean 429.2 ± 15.9 s   CV 3.7%
+
+  grand mean: 427.5 s,  mean CV: 3.6%
+```
+
+Per-timestep variance comes from cache/memory-bandwidth contention with concurrent
+E09 Lanczos run. **rep01 (solo baseline) consistently fastest** at 401-407 s, which
+is closer to the original 405 s reported pre-variance.
+
+Honest scope: a SOLO run gives 405 s; a CONCURRENT run gives 425-435 s. Both are real;
+the +20 s difference is contention. Report the SOLO number when comparing to single-
+threaded benchmarks elsewhere; report the CONCURRENT number when comparing to mixed
+workloads on the same Xeon socket.
+
+### F3-original. CHOLMOD fresh factor on single-thread Xeon = 405 ± 2 s per 500K factor (1-rep baseline)
 
 ```
 6 timesteps   wall_seconds   factor_ms   solve_ms   resid
@@ -86,7 +111,24 @@ Caveats locked in:
   rays=0 degenerate matrix; real physics matrix is 5.4× slower.
 - factor dominates (~99.9%); triangular solve is only ~0.4 s.
 
-### F4. CHOLMOD symbolic-reuse (sksparse 0.5.0) is 21-27% SLOWER than fresh
+### F4-update. CHOLMOD symbolic-reuse 26.4% SLOWER than fresh (5-rep variance confirmed)
+
+```
+E06 5-rep total wall (sequence of 6 steps):
+  rep01 (solo, baseline):                  3074 s   ← cleanest measurement
+  rep02 (concurrent with E09 Lanczos):    3731 s   +21% from contention
+  rep03 ('')                              3625 s   +18%
+  rep04 ('')                              3573 s   +16%
+  rep05 ('')                              3533 s   +15%
+
+Clean E05 vs E06 (rep01 solo vs rep01 solo):
+  E05 fresh ×6 = 2432 s
+  E06 symbolic-reuse = 3074 s
+  ratio: 1.264 → symbolic-reuse is 26.4% SLOWER than 6 fresh factors
+  → C017 REFUTED definitively (now with variance scope)
+```
+
+### F4-original. CHOLMOD symbolic-reuse (sksparse 0.5.0) is 21-27% SLOWER than fresh
 
 ```
 E06 6-step sequence:

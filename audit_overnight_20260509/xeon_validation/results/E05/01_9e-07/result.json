@@ -1,0 +1,35 @@
+{
+  "expt_id": "E05",
+  "rep": 1,
+  "method": "CHOLMOD",
+  "timestep": "9e-07",
+  "phase": "evap",
+  "wall_seconds": 405.649584808,
+  "wall_seconds_method": "MEASURED:perf_counter_ns",
+  "mem_peak_kb": 6398436,
+  "factor_ns": 405156753012,
+  "solve_ns": 492799964,
+  "factor_ms": 405156.753012,
+  "solve_ms": 492.799964,
+  "rel_resid_actual": 1.5536390075672558e-14,
+  "input_md5s": {
+    "A.mm": "e8a8cc28622562abb815367d95d65963",
+    "b.mm": "fd2b111e2ffddb9e570577d5192a3ab9"
+  },
+  "n": 500000,
+  "nnz": 3455000,
+  "sign_flipped": true,
+  "env": {
+    "host": "HR54WV2",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cwd": "/home/yzk/DILU-Research/audit_overnight_20260509",
+    "git_commit": "b083befb2fd4dea1fb21329661105cb5df3e598e",
+    "numpy_version": "2.4.1",
+    "scipy_version": "1.17.0",
+    "sksparse_version": "0.5.0",
+    "openblas_threads": "1",
+    "omp_num_threads": "1"
+  },
+  "config_full_str": "method=CHOLMOD,mode=fresh_factor"
+}

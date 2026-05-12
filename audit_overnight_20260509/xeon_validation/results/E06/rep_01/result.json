@@ -1,0 +1,91 @@
+{
+  "expt_id": "E06",
+  "rep": 1,
+  "wall_seconds": 3073.704560031,
+  "wall_seconds_method": "MEASURED:perf_counter_ns",
+  "n_steps": 6,
+  "method": "CHOLMOD_symbolic_reuse",
+  "sksparse_api": "0.5.0",
+  "config_full_str": "method=CHOLMOD,mode=cho_factor_then_factorize_per_step,api=0.5.0",
+  "per_step": [
+    {
+      "step": 0,
+      "timestep": "3.2e-07",
+      "phase": "melting",
+      "factor_ms": 397246.050003,
+      "refact_ms": 0.0,
+      "solve_ms": 477.398879,
+      "total_ms": 397723.448882,
+      "rel_resid": 1.553026830871319e-14,
+      "method_used": "full_factor"
+    },
+    {
+      "step": 1,
+      "timestep": "3.8e-07",
+      "phase": "melting",
+      "factor_ms": 0.0,
+      "refact_ms": 538021.178749,
+      "solve_ms": 418.558876,
+      "total_ms": 538439.737625,
+      "rel_resid": 2.0621359292281355e-14,
+      "method_used": "symbolic_reuse_refactor"
+    },
+    {
+      "step": 2,
+      "timestep": "4.1e-07",
+      "phase": "melting",
+      "factor_ms": 0.0,
+      "refact_ms": 540188.79262,
+      "solve_ms": 464.15878,
+      "total_ms": 540652.9514,
+      "rel_resid": 2.0454865502661227e-14,
+      "method_used": "symbolic_reuse_refactor"
+    },
+    {
+      "step": 3,
+      "timestep": "7e-07",
+      "phase": "evap_early",
+      "factor_ms": 0.0,
+      "refact_ms": 536364.940099,
+      "solve_ms": 442.979971,
+      "total_ms": 536807.92007,
+      "rel_resid": 2.053663072802058e-14,
+      "method_used": "symbolic_reuse_refactor"
+    },
+    {
+      "step": 4,
+      "timestep": "9e-07",
+      "phase": "evap",
+      "factor_ms": 0.0,
+      "refact_ms": 529602.811979,
+      "solve_ms": 460.875809,
+      "total_ms": 530063.687788,
+      "rel_resid": 2.0519323814958e-14,
+      "method_used": "symbolic_reuse_refactor"
+    },
+    {
+      "step": 5,
+      "timestep": "1.06e-06",
+      "phase": "evap_late",
+      "factor_ms": 0.0,
+      "refact_ms": 529542.573163,
+      "solve_ms": 417.820238,
+      "total_ms": 529960.393401,
+      "rel_resid": 2.0469148783007417e-14,
+      "method_used": "symbolic_reuse_refactor"
+    }
+  ],
+  "warnings": [],
+  "env": {
+    "host": "HR54WV2",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "cwd": "/home/yzk/DILU-Research/audit_overnight_20260509",
+    "git_commit": "b083befb2fd4dea1fb21329661105cb5df3e598e",
+    "numpy_version": "2.4.1",
+    "scipy_version": "1.17.0",
+    "sksparse_version": "0.5.0",
+    "openblas_threads": "1",
+    "omp_num_threads": "1"
+  }
+}
