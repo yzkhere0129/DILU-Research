@@ -234,7 +234,10 @@ ratio:                       ~1000×  (Lanczos is way slower)
 ```
 Both methods give `near_null_dim_estimate = 10` and both confirm the singular cluster. **Practical recommendation: future audits should use svds k=10, not Lanczos shift-invert**, for near-null detection on this matrix class.
 
-**C033 NEW VERIFIED — ALL 7 matrices have near_null_dim_estimate = 10**:
+**C034 NEW VERIFIED — OF marginal cost per pd PCG iter = 34 ms (E01)
+C035 NEW VERIFIED — OF pd is only 15% of per-step wall (laser+T+VOF dominate)
+
+C033 NEW VERIFIED — ALL 7 matrices have near_null_dim_estimate = 10**:
 ```
 matrix                            near_null_dim_estimate
 ─────────────────────────────────────────────────────────
@@ -282,6 +285,45 @@ A GPU iterative solver with warm-start is **operationally tractable** for that.
 
 **What the 158× does NOT support**: a blanket claim that "AMGx beats LU by 158×".
 The number is hardware + threading + tolerance specific.
+
+### F12. C006 settled — TRUE OF wall per pd iteration is 34 ms (not 110 ms)
+
+E01 ran laserMeltFoam 300 timesteps from t=1.2e-6 to t=1.5e-6 with solverInfo
+functionObject. Linear regression of per-step wall vs total pd iter count:
+
+```
+  wall_per_step (s) = 0.034 × pd_iters + 18.90 s
+                       ─────             ─────
+                       slope             intercept
+                       │                 │
+                       │                 = fixed cost per step (T + VOF + laser ray-trace)
+                       = marginal cost per pd PCG iteration = 34 ms
+```
+
+Per-step measurements (299 deltas from 300 timesteps):
+```
+  per-step wall:       mean 21.6 s    median 21.0 s    range 19.5–28.9 s
+  pd iter/step total:  mean 78        median 91        range 17–137
+  ms/pd-iter UB:       median 238 ms  (UB because wall includes T+VOF+laser)
+  pd dominance:        ~15%           (3.1 s pd of 21.0 s median total)
+```
+
+**C006 REFUTED-with-correction**: predecessor estimate `wall_ms = pd_iters × 110 ms`
+was wrong by **~3×** on the marginal-cost interpretation (actual 34 ms), and also
+wrong because pd is only **15% of total OF wall**, not the dominant cost.
+
+Implication for any "OF vs AMGx" wall comparison in the original docs:
+- pd is 15% of step wall, NOT 100%
+- So even if AMGx pd was infinitely fast, max wall savings would be 15%
+- The "OF takes 770-7150 ms per pd solve" line was synthetic; the real per-pd-iter
+  marginal cost is 34 ms × ~78 iter ≈ 2.7 s, but that includes pd-CALL fixed
+  overhead too
+
+Connection to other findings:
+- pd_iters/step median 91 here is much higher than 6 dumped matrices' 7-65
+  (dumped at specific time-snapshots; E01 covers deeper keyhole at later t)
+- All 300 timesteps had `pd_converged=true` (solverInfo cross-check)
+- Wall scales linearly with iter (R² strong by visual inspection)
 
 ## §2 Updated CLAIM_LEDGER amendments
 

@@ -1,0 +1,48 @@
+{
+  "n_timesteps": 299,
+  "time_range_s": [
+    1.202e-06,
+    1.5e-06
+  ],
+  "wall_per_step_s": {
+    "min": 19.539999999999964,
+    "max": 28.9399999999996,
+    "mean": 21.587658862876253,
+    "median": 20.990000000000236,
+    "std": 1.7885190910761466
+  },
+  "pd_iters_per_step_total": {
+    "min": 17,
+    "max": 137,
+    "mean": 78.45484949832776,
+    "median": 91,
+    "std": 29.875557982683443
+  },
+  "pd_iters_first_corrector": {
+    "min": 14,
+    "max": 133,
+    "mean": 75.34448160535118,
+    "median": 88
+  },
+  "pd_iters_corrector_counts": {
+    "1-corr": 0,
+    "2-corr": 0,
+    "3-corr": 0
+  },
+  "ms_per_pd_iter_upper_bound": {
+    "min": 166.93430656934228,
+    "max": 1205.2941176470592,
+    "mean": 342.3807642415355,
+    "median": 237.58620689655257,
+    "note": "wall / iter \u2014 includes T solver + VOF + laser ray-trace; pd is one component"
+  },
+  "solverInfo_cross_check": {
+    "n": 300,
+    "pd_iters_mean": 75.41666666666667,
+    "pd_iters_max": 133,
+    "pd_iters_min": 14,
+    "residuals_initial_mean": 1.4201115735e-05,
+    "residuals_final_mean": 9.607632620333335e-09,
+    "all_converged": true
+  }
+}
