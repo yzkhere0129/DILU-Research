@@ -248,6 +248,41 @@ single_track evap_late 1.06e-06      10
 ```
 All 10 smallest singular values from svds fall below 1e-12. The dim=10 is the svds-k cap; if we asked for k=20, we might find more. But verifiably: **at least** the first 10 singular vectors form the null subspace.
 
+### F11. Master cross-solver ratio (E08 full aggregate, AMGx dev + CHOLMOD Xeon)
+
+```json
+{
+  "amgx_fresh_per_step_s_mean":               4.43,
+  "amgx_amortized_total_s_mean":             26.90,
+  "amgx_amortized_warm_total_s_mean":        16.19,    ← AMGx best mode
+  "amortized_speedup_vs_fresh":               0.989,
+  "warm_amortized_speedup_vs_fresh":          1.643,
+
+  "cholmod_fresh_per_step_s_mean":          427.55,    ← Xeon 1-thread, 5-rep mean
+  "cholmod_fresh_total_6step_estimate_s":  2565.28,
+  "cholmod_symbolic_reuse_total_s_mean":   3507.13,
+  "cholmod_symbolic_speedup_vs_fresh":        0.731,    ← C017 REFUTED
+
+  "AMGx_warm_vs_LU_fresh_speedup":         158.41,    ← headline (caveat below)
+  "AMGx_warm_vs_LU_symbolic_speedup":      216.57
+}
+```
+
+**Hardware-mismatch caveat (CRITICAL)**:
+- AMGx numbers from **dev RTX 3050** (GPU, ~13 TFLOPS fp32 ~6 TFLOPS fp64)
+- CHOLMOD numbers from **Xeon BLAS-pinned 1 thread** (1 core of 56-core Xeon, ~50 GFLOPS fp64)
+- The 158× headline is "single GPU vs single CPU core"
+- Realistic comparisons:
+  - AMGx on lab 5060 (sm_120, faster than 3050) vs CHOLMOD same data: UNTESTED
+  - AMGx on dev 3050 vs CHOLMOD multi-thread Xeon (32 cores): expect ratio drop to ~5-15×
+
+**What the 158× DOES support**: an LPBF time-loop calling `pd` Poisson solver every
+~1 ns step (=1e6 calls per ms simulation) cannot afford 405 s direct-LU per call.
+A GPU iterative solver with warm-start is **operationally tractable** for that.
+
+**What the 158× does NOT support**: a blanket claim that "AMGx beats LU by 158×".
+The number is hardware + threading + tolerance specific.
+
 ## §2 Updated CLAIM_LEDGER amendments
 
 ```
