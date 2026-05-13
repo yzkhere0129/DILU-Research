@@ -128,6 +128,14 @@ def main():
     e = [0.0] * n_ts
     series.append(("CHOLMOD LU direct\n(dev 16-thread BLAS)", "#d62728", w, i, e))
 
+    # Sort series by mean wall (ascending: fastest left → slowest right)
+    series_with_keys = [(s, float(np.nanmean(np.asarray(s[2], dtype=float)))) for s in series]
+    series_with_keys.sort(key=lambda t: t[1])
+    series = [s for s, _ in series_with_keys]
+    print("\nSeries ordered by mean wall (asc):")
+    for s, mw in series_with_keys:
+        print(f"  {mw:7.2f}s  {s[0].replace(chr(10), ' ')}")
+
     n_solvers = len(series)
     # --- 4. Plot ---
     fig, (ax_wall, ax_err) = plt.subplots(1, 2, figsize=(20, 7))
