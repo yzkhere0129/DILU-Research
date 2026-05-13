@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
 NPZ_DIR = Path("/home/yzk/DILU-Research/dilu/amgx/bench")
+LU_DIR  = Path("/home/yzk/DILU-Research/audit_overnight_20260509/xeon_validation/results/E12_LU_single_track")
 OUTDIR  = Path("/home/yzk/DILU-Research/docs/benchmark/figures")
 OUTDIR.mkdir(parents=True, exist_ok=True)
 
@@ -89,8 +90,26 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         a, b = case["x_AMGx_e8"], case["x_truth"]
         title_pair = "AMGx PCG @ tol=1e-8 vs LU truth"
         field_name = "|x_AMGx_e8 - x_truth|"
+    elif pair == "LU_vs_AMGx_e12":
+        # Truth-vs-truth comparison: CHOLMOD direct LU vs AMGx PCG @ tol=1e-12
+        lu_path = LU_DIR / f"x_LU_{t}.npz"
+        if not lu_path.exists():
+            raise FileNotFoundError(f"x_LU not yet computed for t={t}: {lu_path}\n"
+                                      f"Run compute_x_LU_single_track.py on Xeon first.")
+        lu = np.load(lu_path)
+        a_name, b_name = "x_LU (CHOLMOD direct)", "x_AMGx_e12 (PCG @ 1e-12)"
+        a, b = lu["x_LU"], case["x_truth"]
+        title_pair = "CHOLMOD LU vs AMGx PCG @ tol=1e-12 (both ε-machine truth)"
+        field_name = "|x_LU - x_AMGx_e12|"
     else:
         raise ValueError(f"unknown pair {pair}")
+
+    # Override VMIN/VMAX for LU_vs_AMGx_e12 pair (much smaller diffs — ppb level)
+    global VMIN, VMAX
+    if pair == "LU_vs_AMGx_e12":
+        vmin_use, vmax_use = 1e-15, 1e-7  # % — diffs are at ~1e-9 % rel
+    else:
+        vmin_use, vmax_use = VMIN, VMAX
 
     diff_flat_Pa = np.abs(a - b)
     x_max = float(np.max(np.abs(b)))  # peak of reference solution (used as normalizer)
@@ -109,7 +128,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
 
     fig, axes = plt.subplots(2, 4, figsize=(20, 9))
     cmap = "magma"
-    norm = LogNorm(vmin=VMIN, vmax=VMAX)
+    norm = LogNorm(vmin=vmin_use, vmax=vmax_use)
 
     # ---- Row 1: xy slices at 4 z-depths ----
     for col, z_um in enumerate(Z_SLICES_UM):
@@ -118,7 +137,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         slc = diff_vol[k, :, :]   # shape (ny, nx)
         # Clip below VMIN to VMIN for log scale display (no negatives anyway since |·|)
         # Clip below VMIN so log-scale doesn't blow up on exact zeros
-        slc_disp = np.maximum(slc, VMIN)
+        slc_disp = np.maximum(slc, vmin_use)
 
         x_cc = (np.arange(nx) + 0.5) * dx
         y_cc = (np.arange(ny) + 0.5) * dx
@@ -141,7 +160,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         ax = axes[1, col]
         j = int(round(y_um / dx))
         slc = diff_vol[:, j, :]   # shape (nz, nx), in %
-        slc_disp = np.maximum(slc, VMIN)
+        slc_disp = np.maximum(slc, vmin_use)
 
         x_cc = (np.arange(nx) + 0.5) * dx
         z_cc = (np.arange(nz) + 0.5) * dx
@@ -164,8 +183,8 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
                          ax=axes.ravel().tolist(), shrink=0.7, pad=0.02,
                          fraction=0.022)
-    cbar.set_label(f"{field_name} / max|x_LU|  (%, log scale, "
-                    f"range {VMIN:.0e}% ... {VMAX:.0e}%)", fontsize=10)
+    cbar.set_label(f"{field_name} / max|x_truth|  (%, log scale, "
+                    f"range {vmin_use:.0e}% ... {vmax_use:.0e}%)", fontsize=10)
 
     fig.suptitle(
         f"single_track_dump pd_corr0 — {title_pair}\n"
@@ -189,7 +208,8 @@ if __name__ == "__main__":
     ap.add_argument("--phase", default="melt")
     ap.add_argument("--t", default="4.1e-07")
     ap.add_argument("--pair", default="OF_vs_AMGx_e8",
-                    choices=["OF_vs_AMGx_e8", "OF_vs_truth", "AMGx_e8_vs_truth"])
+                    choices=["OF_vs_AMGx_e8", "OF_vs_truth", "AMGx_e8_vs_truth",
+                             "LU_vs_AMGx_e12"])
     ap.add_argument("--all", action="store_true",
                     help="generate all 6 timesteps × all 3 pairs")
     args = ap.parse_args()
