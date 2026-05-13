@@ -36,12 +36,13 @@ Z_SLICES_UM = [96, 108, 120, 132]
 # Y-position side-view slices (μm)
 Y_SLICES_UM = [100, 300, 500, 620]
 
-# Log color scale: vmin=1e-12 Pa, vmax=1e1 Pa (user request 2026-05-13)
-# 13 orders of magnitude covers everything from AMGx+IR vs LU (~1e-12 Pa quantum)
-# to OF vs AMGx PCG (~10 Pa max).  Unified scale lets all 3 solver pairs be
-# compared on the same colorbar.
-VMIN = 1e-12
-VMAX = 1e1  # 10 Pa
+# Log color scale on RELATIVE diff in % (= |Δ| / max|x_LU| × 100).
+# Range chosen to cover all 3 solver pairs on the same colorbar:
+#   AMGx+IR vs LU truth:    rel_max ~ 1e-11 = 1e-9 %
+#   OF / AMGx_e8 vs truth:  rel_max ~ 1e-5  = 1e-3 %
+#   max|Δ| Pa to % ratio:   ~1.28 MPa peak  →  1 Pa = 7.8e-5 %
+VMIN = 1e-13  # %  (below AMGx+IR noise floor)
+VMAX = 1e-2   # %  (above OF tol=1e-8 typical drift)
 
 # Powder surface (substrate top) for cyan reference line in side views
 POWDER_SURFACE_UM = 100.0
@@ -91,17 +92,20 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     else:
         raise ValueError(f"unknown pair {pair}")
 
-    diff_flat = np.abs(a - b)
+    diff_flat_Pa = np.abs(a - b)
+    x_max = float(np.max(np.abs(b)))  # peak of reference solution (used as normalizer)
+    diff_flat = diff_flat_Pa / max(x_max, 1e-300) * 100.0  # relative diff in %
     diff_vol = to_volume(diff_flat, case)
-    x_max = float(np.max(np.abs(b)))  # scale relative to one of the solutions
+    diff_vol_Pa = to_volume(diff_flat_Pa, case)
 
-    # Global stats
-    max_diff = float(diff_flat.max())
-    rel_max = max_diff / max(x_max, 1e-300)
-    cells_gt_1Pa = int(np.sum(diff_flat > 1.0))
-    cells_gt_10Pa = int(np.sum(diff_flat > 10.0))
-    cells_gt_100Pa = int(np.sum(diff_flat > 100.0))
-    cells_gt_1kPa = int(np.sum(diff_flat > 1000.0))
+    # Global stats (both Pa and %)
+    max_diff_Pa = float(diff_flat_Pa.max())
+    max_diff_pct = float(diff_flat.max())  # = rel_max × 100
+    rel_max = max_diff_Pa / max(x_max, 1e-300)
+    cells_gt_1Pa = int(np.sum(diff_flat_Pa > 1.0))
+    cells_gt_10Pa = int(np.sum(diff_flat_Pa > 10.0))
+    cells_gt_100Pa = int(np.sum(diff_flat_Pa > 100.0))
+    cells_gt_1kPa = int(np.sum(diff_flat_Pa > 1000.0))
 
     fig, axes = plt.subplots(2, 4, figsize=(20, 9))
     cmap = "magma"
@@ -121,11 +125,11 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         X, Y = np.meshgrid(x_cc, y_cc)
         im = ax.pcolormesh(X, Y, slc_disp, norm=norm, cmap=cmap,
                             shading="auto", rasterized=True)
-        n_gt1 = int(np.sum(slc > 1.0))
-        n_med = int(np.sum(slc > 1e-6))
+        slc_Pa = diff_vol_Pa[k, :, :]
+        n_gt1 = int(np.sum(slc_Pa > 1.0))
         ax.set_title(f"z = {z_um} μm  (k={k})\n"
-                      f"|diff| max in slice = {slc.max():.2e} Pa\n"
-                      f"{n_gt1} cells > 1 Pa, {n_med} > 1e-6 Pa", fontsize=8.5)
+                      f"max in slice = {slc.max():.2e} % ({slc_Pa.max():.2e} Pa)\n"
+                      f"{n_gt1} cells > 1 Pa", fontsize=8.5)
         ax.set_xlabel("x (μm)", fontsize=8)
         if col == 0: ax.set_ylabel("y (μm) — laser scan axis", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, ny*dx)
@@ -136,7 +140,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     for col, y_um in enumerate(Y_SLICES_UM):
         ax = axes[1, col]
         j = int(round(y_um / dx))
-        slc = diff_vol[:, j, :]   # shape (nz, nx)
+        slc = diff_vol[:, j, :]   # shape (nz, nx), in %
         slc_disp = np.maximum(slc, VMIN)
 
         x_cc = (np.arange(nx) + 0.5) * dx
@@ -146,10 +150,10 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
                        shading="auto", rasterized=True)
         # cyan reference at powder/substrate interface
         ax.axhline(POWDER_SURFACE_UM, color="cyan", linestyle=":", linewidth=1, alpha=0.7)
-        n_gt1 = int(np.sum(slc > 1.0))
-        n_med = int(np.sum(slc > 1e-6))
+        slc_Pa = diff_vol_Pa[:, j, :]
+        n_gt1 = int(np.sum(slc_Pa > 1.0))
         ax.set_title(f"y = {y_um} μm  (j={j})\n"
-                      f"|diff| max = {slc.max():.2e} Pa, {n_gt1} > 1 Pa, {n_med} > 1e-6 Pa", fontsize=8.5)
+                      f"max = {slc.max():.2e} % ({slc_Pa.max():.2e} Pa), {n_gt1} > 1 Pa", fontsize=8.5)
         ax.set_xlabel("x (μm)", fontsize=8)
         if col == 0: ax.set_ylabel("z (μm) — depth", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, nz*dx)
@@ -160,23 +164,24 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
                          ax=axes.ravel().tolist(), shrink=0.7, pad=0.02,
                          fraction=0.022)
-    cbar.set_label(f"{field_name}  (Pa, log scale, range {VMIN:.0e} ... {VMAX:.0e} Pa)",
-                    fontsize=10)
+    cbar.set_label(f"{field_name} / max|x_LU|  (%, log scale, "
+                    f"range {VMIN:.0e}% ... {VMAX:.0e}%)", fontsize=10)
 
     fig.suptitle(
         f"single_track_dump pd_corr0 — {title_pair}\n"
-        f"{field_name} spatial slices  ({phase}, t={t})\n"
-        f"max diff = {max_diff:.2e} Pa (rel = {rel_max:.2e}), "
+        f"{field_name} / max|x_LU| spatial slices  ({phase}, t={t})\n"
+        f"max diff = {max_diff_pct:.2e} % ({max_diff_Pa:.2e} Pa, rel = {rel_max:.2e}),  "
         f"{cells_gt_1Pa} cells > 1 Pa, {cells_gt_10Pa} > 10 Pa, "
         f"{cells_gt_100Pa} > 100 Pa, {cells_gt_1kPa} > 1 kPa  (of {N:,} total)\n"
         f"Top: horizontal slices at 4 depths   |   "
-        f"Bottom: side views at 4 y positions (cyan dotted = nominal substrate-powder interface z≈{POWDER_SURFACE_UM:.0f}μm)",
+        f"Bottom: side views at 4 y positions (cyan dotted = substrate-powder interface z≈{POWDER_SURFACE_UM:.0f}μm)",
         fontsize=10, y=0.995
     )
     out = OUTDIR / f"single_track_{phase}_{t}_{pair}_diff_slices.png"
     fig.savefig(out, dpi=140, bbox_inches="tight")
     plt.close(fig)
-    print(f"  → {out}  (max|Δ|={max_diff:.2e}Pa, rel={rel_max:.2e}, >1Pa={cells_gt_1Pa}, >10Pa={cells_gt_10Pa})")
+    print(f"  → {out}  (max|Δ|={max_diff_Pa:.2e}Pa = {max_diff_pct:.2e}%, "
+          f">1Pa={cells_gt_1Pa}, >10Pa={cells_gt_10Pa})")
 
 
 if __name__ == "__main__":
