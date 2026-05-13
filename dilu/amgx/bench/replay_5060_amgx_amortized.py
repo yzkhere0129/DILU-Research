@@ -16,17 +16,25 @@ For each step record:
     sign_flipped, n, nnz
 
 Output:
-    <out>/replay_<protocol>.npz       per-step arrays
+    <out>/replay_<protocol>.npz       per-step arrays  (also written every K steps as partial)
     <out>/summary.json                 aggregate stats
     <out>/run_meta.json                env + GPU info
 
+Resume policy:
+    If `replay_<protocol>.npz` exists with step_done == n_steps, that protocol
+    is treated as DONE and skipped on relaunch. Partial files (step_done < n)
+    are NOT resumed mid-protocol (amortized state can't be reconstructed); the
+    protocol is re-run from scratch.
+
 Usage (lab 5060):
-    ~/jax-env/bin/python3 -u dilu/amgx/bench/replay_5060_amgx_amortized.py \\
+    PYTHONPATH=. python -u dilu/amgx/bench/replay_5060_amgx_amortized.py \\
         --case ~/cases/dense_track_dump_500K \\
         --pool validate_dense/sane_pool.txt \\
-        --output-dir audit_overnight_20260509/lab_5060_replay \\
+        --output-dir audit_overnight_20260509/lab_5060_replay/results \\
         --max 384 \\
-        --protocols fresh_e8,amortized_e8,fresh_e12_IR,amortized_e12_IR
+        --protocols fresh_e8,amortized_e8,fresh_e12_IR,amortized_e12_IR \\
+        --lazy-load \\
+        --checkpoint-every 10
 """
 from __future__ import annotations
 
@@ -93,6 +101,28 @@ def read_pool(pool_path: Path) -> list[str]:
     return rels
 
 
+class Bundle:
+    """One matrix; either pre-loaded (eager) or lazily loaded on demand."""
+    __slots__ = ("case", "rel", "ts", "A", "b", "sign_flipped", "_eager")
+    def __init__(self, case: Path, rel: str, eager: bool):
+        self.case = case
+        self.rel = rel
+        self.ts = rel.split("/")[0]
+        self.A = None
+        self.b = None
+        self.sign_flipped = None
+        self._eager = eager
+        if eager:
+            self.ensure_loaded()
+    def ensure_loaded(self):
+        if self.A is None:
+            self.A, self.b, self.sign_flipped = load_matrix(self.case, self.rel)
+    def free(self):
+        if not self._eager:
+            self.A = None
+            self.b = None
+
+
 # ----------------------------------------------------------------------------
 # Protocol runners
 # ----------------------------------------------------------------------------
@@ -105,19 +135,10 @@ PROTOCOL_CONFIGS = {
 }
 
 
-def run_protocol(name: str, bundles, base_config: str, max_iters: int):
-    """Run one protocol over the bundle list. Returns dict of per-step arrays."""
-    cfg = PROTOCOL_CONFIGS[name]
-    tol = cfg["tol"]
-    n_ir = cfg["n_ir"]
-    amortized = cfg["amortized"]
-    cfg_json = with_tolerance(base_config, tol, max_iters=max_iters)
-
-    n_steps = len(bundles)
-    # per-step records
-    rec = {
+def empty_rec(n_steps: int, bundles):
+    return {
         "step": np.arange(n_steps, dtype=np.int32),
-        "ts": np.array([b["ts"] for b in bundles], dtype=object),
+        "ts": np.array([b.ts for b in bundles], dtype="U16"),
         "n": np.zeros(n_steps, dtype=np.int64),
         "nnz": np.zeros(n_steps, dtype=np.int64),
         "sign_flipped": np.zeros(n_steps, dtype=bool),
@@ -131,6 +152,44 @@ def run_protocol(name: str, bundles, base_config: str, max_iters: int):
         "rel_resid": np.zeros(n_steps),
     }
 
+
+def save_checkpoint(npz_path: Path, rec: dict, step_done: int,
+                    protocol_wall_s_so_far: float):
+    save_kwargs = dict(rec)
+    save_kwargs["step_done"] = np.array([step_done], dtype=np.int32)
+    save_kwargs["protocol_wall_s"] = np.array([protocol_wall_s_so_far])
+    # atomic-ish: write to .tmp.npz then rename
+    # (np.savez_compressed appends '.npz' if the path lacks that suffix, so the
+    #  tmp name must already end in '.npz' to land where we expect.)
+    tmp = npz_path.with_name(npz_path.stem + ".tmp.npz")
+    np.savez_compressed(tmp, **save_kwargs)
+    tmp.replace(npz_path)
+
+
+def is_protocol_done(npz_path: Path, n_steps: int) -> bool:
+    if not npz_path.exists():
+        return False
+    try:
+        d = np.load(npz_path, allow_pickle=False)
+        sd = int(d["step_done"][0]) if "step_done" in d.files else 0
+        return sd >= n_steps
+    except Exception:
+        return False
+
+
+def run_protocol(name: str, bundles, base_config: str, max_iters: int,
+                 out_dir: Path, checkpoint_every: int, lazy: bool):
+    """Run one protocol over the bundle list. Returns dict of per-step arrays."""
+    cfg = PROTOCOL_CONFIGS[name]
+    tol = cfg["tol"]
+    n_ir = cfg["n_ir"]
+    amortized = cfg["amortized"]
+    cfg_json = with_tolerance(base_config, tol, max_iters=max_iters)
+
+    n_steps = len(bundles)
+    rec = empty_rec(n_steps, bundles)
+    npz_path = out_dir / f"replay_{name}.npz"
+
     plan = None
     x_prev_np = None  # for warm-start (amortized only)
 
@@ -138,9 +197,10 @@ def run_protocol(name: str, bundles, base_config: str, max_iters: int):
     t_proto_start = time.time()
 
     for k, bun in enumerate(bundles):
-        A = bun["A"]
-        b = bun["b"]
-        sign_flipped = bun["sign_flipped"]
+        bun.ensure_loaded()
+        A = bun.A
+        b = bun.b
+        sign_flipped = bun.sign_flipped
         n = A.shape[0]
         nnz = A.nnz
         rec["n"][k] = n
@@ -212,16 +272,26 @@ def run_protocol(name: str, bundles, base_config: str, max_iters: int):
 
         x_prev_np = x  # for amortized warm-start
 
+        # free lazy bundle to reclaim RAM
+        bun.free()
+
         if k % 10 == 0 or k == n_steps - 1:
             cum = time.time() - t_proto_start
-            print(f"  [{k+1}/{n_steps}] ts={bun['ts']:>12}  "
+            eta_min = (cum / max(k+1, 1)) * (n_steps - k - 1) / 60
+            print(f"  [{k+1}/{n_steps}] ts={bun.ts:>12}  "
                   f"setup={rec['setup_s'][k]*1000:6.0f}ms  "
                   f"upd={rec['update_s'][k]*1000:6.0f}ms  "
                   f"solve={rec['solve_s'][k]*1000:6.0f}ms  "
                   f"ir={rec['ir_s'][k]*1000:5.0f}ms  "
                   f"iter={rec['iters'][k]:4d}  "
                   f"resid={rec['rel_resid'][k]:.2e}  "
-                  f"cum={cum/60:.1f}min")
+                  f"cum={cum/60:.1f}min  eta={eta_min:.1f}min")
+
+        # checkpoint
+        if checkpoint_every > 0 and (
+            (k+1) % checkpoint_every == 0 or k == n_steps - 1
+        ):
+            save_checkpoint(npz_path, rec, k+1, time.time() - t_proto_start)
 
         # free per-step GPU buffers
         del rp, ci, vv, b_d, x0, x_jax, iters_dev, status_dev
@@ -231,8 +301,9 @@ def run_protocol(name: str, bundles, base_config: str, max_iters: int):
     if plan is not None:
         plan.release()
 
-    rec["protocol_wall_s"] = time.time() - t_proto_start
-    return rec
+    # final checkpoint (idempotent — already saved at last iter, but be safe)
+    save_checkpoint(npz_path, rec, n_steps, time.time() - t_proto_start)
+    return rec, time.time() - t_proto_start
 
 
 # ----------------------------------------------------------------------------
@@ -250,6 +321,14 @@ def main():
                     help="base AMGx config (DIAGSCALED = CLASSICAL_V_DIAGSCALED)")
     ap.add_argument("--max-iters", type=int, default=2000,
                     help="AMGx max outer PCG iters (default 2000 to give tol=1e-12 room)")
+    ap.add_argument("--lazy-load", action="store_true",
+                    help="Load matrices on demand (less RAM, more I/O). "
+                         "Use when --max ≥ 200 or RAM < 16 GB.")
+    ap.add_argument("--checkpoint-every", type=int, default=10,
+                    help="Write partial npz every K steps so progress survives a crash. "
+                         "0 = disabled (only final save).")
+    ap.add_argument("--force", action="store_true",
+                    help="Re-run protocols even if a completed npz exists.")
     args = ap.parse_args()
 
     case = Path(args.case).expanduser()
@@ -260,22 +339,28 @@ def main():
     rels = read_pool(pool)
     if len(rels) > args.max:
         rels = rels[:args.max]
-    print(f"# Loading {len(rels)} matrices from {case} ...")
+    print(f"# {len(rels)} matrices from {case}  (lazy_load={args.lazy_load})")
 
-    # Pre-load ALL matrices once to avoid I/O noise dominating timing
-    # (500K LPBF: ~3.4M nnz, ~80MB ASCII → ~25MB in memory each; 384 × 25MB = ~10GB.
-    #  If RAM is tight, switch to lazy load.)
+    # Build bundles. Eager mode pre-loads all to RAM; lazy mode defers I/O.
     bundles = []
     t0 = time.time()
     for i, rel in enumerate(rels):
-        A, b, sf = load_matrix(case, rel)
-        bundles.append({"ts": rel.split("/")[0], "rel": rel,
-                        "A": A, "b": b, "sign_flipped": sf})
-        if i % 20 == 0:
-            print(f"  loaded {i+1}/{len(rels)}  cum={time.time()-t0:.1f}s")
-    print(f"  loaded all {len(rels)} matrices in {time.time()-t0:.1f}s")
+        bundles.append(Bundle(case, rel, eager=not args.lazy_load))
+        if not args.lazy_load and (i % 20 == 0):
+            print(f"  eager-loaded {i+1}/{len(rels)}  cum={time.time()-t0:.1f}s")
+    if not args.lazy_load:
+        print(f"  all {len(rels)} matrices in RAM, {time.time()-t0:.1f}s")
+    else:
+        print(f"  lazy mode: matrices will load on demand")
 
     base_config = CLASSICAL_V_DIAGSCALED
+
+    # Probe one matrix for meta (always needed for n/nnz)
+    bundles[0].ensure_loaded()
+    n_probe = bundles[0].A.shape[0]
+    nnz_probe = bundles[0].A.nnz
+    if args.lazy_load:
+        bundles[0].free()
 
     # Env meta
     try:
@@ -288,11 +373,13 @@ def main():
         "case": str(case),
         "pool": str(pool),
         "n_matrices": len(rels),
-        "n_per_matrix": int(bundles[0]["A"].shape[0]) if bundles else None,
-        "nnz_per_matrix": int(bundles[0]["A"].nnz) if bundles else None,
-        "protocols": args.protocols.split(","),
+        "n_per_matrix": int(n_probe),
+        "nnz_per_matrix": int(nnz_probe),
+        "protocols": [p.strip() for p in args.protocols.split(",")],
         "config": args.config,
         "max_iters": args.max_iters,
+        "lazy_load": bool(args.lazy_load),
+        "checkpoint_every": int(args.checkpoint_every),
         "gpu": smi,
         "python": sys.version,
         "jax": jax.__version__,
@@ -307,21 +394,39 @@ def main():
         proto = proto.strip()
         if proto not in PROTOCOL_CONFIGS:
             print(f"  skip unknown protocol: {proto}"); continue
-        rec = run_protocol(proto, bundles, base_config, args.max_iters)
 
-        # Save raw npz
         npz_path = out / f"replay_{proto}.npz"
-        save_kwargs = {k: v for k, v in rec.items() if k != "protocol_wall_s"}
-        save_kwargs["protocol_wall_s"] = np.array([rec["protocol_wall_s"]])
-        # ts is object dtype list of strings; convert to fixed unicode
-        save_kwargs["ts"] = np.array(save_kwargs["ts"], dtype="U16")
-        np.savez_compressed(npz_path, **save_kwargs)
+        if not args.force and is_protocol_done(npz_path, len(bundles)):
+            print(f"\n=== protocol: {proto}  ALREADY DONE — skipping (use --force to re-run) ===")
+            # load aggregate from existing file
+            d = np.load(npz_path, allow_pickle=False)
+            agg = {
+                "n_steps": int(d["step_done"][0]),
+                "wall_total_s": float(d["protocol_wall_s"][0]),
+                "setup_s_total": float(np.sum(d["setup_s"])),
+                "update_s_total": float(np.sum(d["update_s"])),
+                "solve_s_total": float(np.sum(d["solve_s"])),
+                "ir_s_total": float(np.sum(d["ir_s"])),
+                "iter_mean": float(np.mean(d["iters"])),
+                "iter_median": float(np.median(d["iters"])),
+                "iter_min": int(np.min(d["iters"])),
+                "iter_max": int(np.max(d["iters"])),
+                "rel_resid_max": float(np.max(d["rel_resid"])),
+                "rel_resid_median": float(np.median(d["rel_resid"])),
+                "n_status_nonzero": int(np.sum(d["status"] != 0)),
+                "resumed": True,
+            }
+            summary[proto] = agg
+            continue
+
+        rec, wall_s = run_protocol(proto, bundles, base_config, args.max_iters,
+                                    out, args.checkpoint_every, args.lazy_load)
         print(f"  → {npz_path}")
 
         # Aggregate
         agg = {
             "n_steps": int(len(rec["step"])),
-            "wall_total_s": float(rec["protocol_wall_s"]),
+            "wall_total_s": float(wall_s),
             "setup_s_total": float(np.sum(rec["setup_s"])),
             "update_s_total": float(np.sum(rec["update_s"])),
             "solve_s_total": float(np.sum(rec["solve_s"])),
@@ -339,6 +444,9 @@ def main():
               f"iter_med={agg['iter_median']:.0f}  "
               f"resid_max={agg['rel_resid_max']:.2e}  "
               f"failed={agg['n_status_nonzero']}")
+
+        # write summary after each protocol so partial runs still report
+        (out / "summary.json").write_text(json.dumps(summary, indent=2))
 
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
     print(f"\nWritten summary: {out / 'summary.json'}")
