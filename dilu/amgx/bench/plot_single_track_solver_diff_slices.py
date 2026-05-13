@@ -36,9 +36,12 @@ Z_SLICES_UM = [96, 108, 120, 132]
 # Y-position side-view slices (μm)
 Y_SLICES_UM = [100, 300, 500, 620]
 
-# Log color scale: vmin=1 Pa, vmax=10 Pa (user requested)
-VMIN = 1.0
-VMAX = 10.0  # 10^1 Pa
+# Log color scale: vmin=1e-12 Pa, vmax=1e1 Pa (user request 2026-05-13)
+# 13 orders of magnitude covers everything from AMGx+IR vs LU (~1e-12 Pa quantum)
+# to OF vs AMGx PCG (~10 Pa max).  Unified scale lets all 3 solver pairs be
+# compared on the same colorbar.
+VMIN = 1e-12
+VMAX = 1e1  # 10 Pa
 
 # Powder surface (substrate top) for cyan reference line in side views
 POWDER_SURFACE_UM = 100.0
@@ -110,7 +113,8 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         k = int(round(z_um / dx))
         slc = diff_vol[k, :, :]   # shape (ny, nx)
         # Clip below VMIN to VMIN for log scale display (no negatives anyway since |·|)
-        slc_disp = np.maximum(slc, VMIN * 0.01)
+        # Clip below VMIN so log-scale doesn't blow up on exact zeros
+        slc_disp = np.maximum(slc, VMIN)
 
         x_cc = (np.arange(nx) + 0.5) * dx
         y_cc = (np.arange(ny) + 0.5) * dx
@@ -118,9 +122,10 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         im = ax.pcolormesh(X, Y, slc_disp, norm=norm, cmap=cmap,
                             shading="auto", rasterized=True)
         n_gt1 = int(np.sum(slc > 1.0))
+        n_med = int(np.sum(slc > 1e-6))
         ax.set_title(f"z = {z_um} μm  (k={k})\n"
                       f"|diff| max in slice = {slc.max():.2e} Pa\n"
-                      f"{n_gt1} cells > 1 Pa", fontsize=8.5)
+                      f"{n_gt1} cells > 1 Pa, {n_med} > 1e-6 Pa", fontsize=8.5)
         ax.set_xlabel("x (μm)", fontsize=8)
         if col == 0: ax.set_ylabel("y (μm) — laser scan axis", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, ny*dx)
@@ -132,7 +137,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         ax = axes[1, col]
         j = int(round(y_um / dx))
         slc = diff_vol[:, j, :]   # shape (nz, nx)
-        slc_disp = np.maximum(slc, VMIN * 0.01)
+        slc_disp = np.maximum(slc, VMIN)
 
         x_cc = (np.arange(nx) + 0.5) * dx
         z_cc = (np.arange(nz) + 0.5) * dx
@@ -142,8 +147,9 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         # cyan reference at powder/substrate interface
         ax.axhline(POWDER_SURFACE_UM, color="cyan", linestyle=":", linewidth=1, alpha=0.7)
         n_gt1 = int(np.sum(slc > 1.0))
+        n_med = int(np.sum(slc > 1e-6))
         ax.set_title(f"y = {y_um} μm  (j={j})\n"
-                      f"|diff| max = {slc.max():.2e} Pa, {n_gt1} cells > 1 Pa", fontsize=8.5)
+                      f"|diff| max = {slc.max():.2e} Pa, {n_gt1} > 1 Pa, {n_med} > 1e-6 Pa", fontsize=8.5)
         ax.set_xlabel("x (μm)", fontsize=8)
         if col == 0: ax.set_ylabel("z (μm) — depth", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, nz*dx)
@@ -154,7 +160,8 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
                          ax=axes.ravel().tolist(), shrink=0.7, pad=0.02,
                          fraction=0.022)
-    cbar.set_label(f"{field_name}  (Pa, log scale, capped at {VMAX:.0f} Pa)", fontsize=10)
+    cbar.set_label(f"{field_name}  (Pa, log scale, range {VMIN:.0e} ... {VMAX:.0e} Pa)",
+                    fontsize=10)
 
     fig.suptitle(
         f"single_track_dump pd_corr0 — {title_pair}\n"
