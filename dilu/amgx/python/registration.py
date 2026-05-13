@@ -72,26 +72,30 @@ def register_once() -> None:
             h.restype = ctypes.c_void_p
             h.argtypes = [ctypes.c_void_p]
 
-        jax.ffi.register_ffi_target(
-            SETUP_TARGET,
-            jax.ffi.pycapsule(_lib.AmgxSetup),
-            platform="CUDA", api_version=1,
-        )
-        jax.ffi.register_ffi_target(
-            UPDATE_TARGET,
-            jax.ffi.pycapsule(_lib.AmgxUpdateCoefficients),
-            platform="CUDA", api_version=1,
-        )
-        jax.ffi.register_ffi_target(
-            SOLVE_TARGET,
-            jax.ffi.pycapsule(_lib.AmgxSolve),
-            platform="CUDA", api_version=1,
-        )
-        jax.ffi.register_ffi_target(
-            RELEASE_TARGET,
-            jax.ffi.pycapsule(_lib.AmgxRelease),
-            platform="CUDA", api_version=1,
-        )
+        # JAX platform canonicalization varies across (jax, python) versions:
+        #   jax 0.9.0 / py 3.12: accepts "CUDA"
+        #   jax 0.9.0 / py 3.14: rejects "CUDA", needs "cuda" (canonical)
+        # Register under BOTH names so we work everywhere. Skip silently if a
+        # given name is already taken (e.g. one canonicalizes to the other).
+        def _reg(name, fn):
+            capsule = jax.ffi.pycapsule(fn)
+            registered_any = False
+            for plat in ("cuda", "CUDA"):
+                try:
+                    jax.ffi.register_ffi_target(name, capsule,
+                                                  platform=plat, api_version=1)
+                    registered_any = True
+                except Exception:
+                    pass
+            if not registered_any:
+                raise RuntimeError(
+                    f"Failed to register FFI target {name!r} on "
+                    f"either 'cuda' or 'CUDA' platform."
+                )
+        _reg(SETUP_TARGET,   _lib.AmgxSetup)
+        _reg(UPDATE_TARGET,  _lib.AmgxUpdateCoefficients)
+        _reg(SOLVE_TARGET,   _lib.AmgxSolve)
+        _reg(RELEASE_TARGET, _lib.AmgxRelease)
         _registered = True
 
 
