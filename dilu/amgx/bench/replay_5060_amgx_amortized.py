@@ -62,8 +62,21 @@ import jax
 import jax.numpy as jnp
 
 from dilu.amgx.python import (
-    Plan, CLASSICAL_V_DIAGSCALED, with_tolerance,
+    Plan, CLASSICAL_V_DIAGSCALED, CLASSICAL_V_DIAGSCALED_BICGSTAB,
+    with_tolerance,
 )
+
+
+# Equation → base AMGx config.
+# pd_corr0: SPD Poisson, PCG suffices.
+# T_corr0:  has small advection asymmetry (asym ~1e-6 on dense_track 500K), use
+#           BICGSTAB to be safe even though PCG often still converges.
+EQUATION_CONFIG = {
+    "pd_corr0": ("PCG_DIAGSCALED",      CLASSICAL_V_DIAGSCALED),
+    "pd_corr1": ("PCG_DIAGSCALED",      CLASSICAL_V_DIAGSCALED),
+    "pd_corr2": ("PCG_DIAGSCALED",      CLASSICAL_V_DIAGSCALED),
+    "T_corr0":  ("BICGSTAB_DIAGSCALED", CLASSICAL_V_DIAGSCALED_BICGSTAB),
+}
 
 
 # ----------------------------------------------------------------------------
@@ -317,8 +330,10 @@ def main():
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--max", type=int, default=384, help="cap number of matrices")
     ap.add_argument("--protocols", default="fresh_e8,amortized_e8,fresh_e12_IR,amortized_e12_IR")
-    ap.add_argument("--config", choices=["DIAGSCALED"], default="DIAGSCALED",
-                    help="base AMGx config (DIAGSCALED = CLASSICAL_V_DIAGSCALED)")
+    ap.add_argument("--equation", default="pd_corr0",
+                    choices=list(EQUATION_CONFIG.keys()),
+                    help="OF equation to replay. Auto-selects AMGx outer solver: "
+                         "pd_* → PCG, T_corr0 → BICGSTAB.")
     ap.add_argument("--max-iters", type=int, default=2000,
                     help="AMGx max outer PCG iters (default 2000 to give tol=1e-12 room)")
     ap.add_argument("--lazy-load", action="store_true",
@@ -337,6 +352,19 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     rels = read_pool(pool)
+    # Normalize system part to match --equation (pool may have pd_corr0 but
+    # user asked for T_corr0). Defensive: every entry uses args.equation.
+    normalized = []
+    for rel in rels:
+        parts = rel.split("/")
+        if len(parts) >= 2:
+            ts = parts[0]
+            normalized.append(f"{ts}/{args.equation}")
+        else:
+            normalized.append(f"{rel}/{args.equation}")
+    if rels and normalized != rels:
+        print(f"  ⚠ sane_pool had system != {args.equation}, normalized {len(rels)} entries")
+    rels = normalized
     if len(rels) > args.max:
         rels = rels[:args.max]
     print(f"# {len(rels)} matrices from {case}  (lazy_load={args.lazy_load})")
@@ -353,7 +381,8 @@ def main():
     else:
         print(f"  lazy mode: matrices will load on demand")
 
-    base_config = CLASSICAL_V_DIAGSCALED
+    cfg_name, base_config = EQUATION_CONFIG[args.equation]
+    print(f"  equation: {args.equation}  →  outer solver: {cfg_name}")
 
     # Probe one matrix for meta (always needed for n/nnz)
     bundles[0].ensure_loaded()
@@ -376,7 +405,8 @@ def main():
         "n_per_matrix": int(n_probe),
         "nnz_per_matrix": int(nnz_probe),
         "protocols": [p.strip() for p in args.protocols.split(",")],
-        "config": args.config,
+        "equation": args.equation,
+        "config": cfg_name,
         "max_iters": args.max_iters,
         "lazy_load": bool(args.lazy_load),
         "checkpoint_every": int(args.checkpoint_every),
