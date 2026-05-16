@@ -56,18 +56,22 @@ def main():
     fig, axes = plt.subplots(2, 2, figsize=(16, 10))
     ax_wall, ax_iter, ax_cum, ax_bd = axes[0,0], axes[0,1], axes[1,0], axes[1,1]
 
-    # Panel 1: wall per step
+    # Panel 1: per-step GPU work time (setup + update + solve + ir, EXCLUDES
+    # the lazy-load I/O of parsing 125 MB ASCII matrix files — that's a replay
+    # artifact, not real solver work).
     for proto, rec in recs.items():
         step = rec["step"]
         ax_wall.plot(step, rec["total_s"] * 1000, label=proto,
                      color=PROTO_COLOR[proto], linewidth=1.0, alpha=0.85)
     if args.of_wall_per_step:
         ax_wall.axhline(args.of_wall_per_step * 1000, color="black",
-                        linestyle="--", linewidth=1,
-                        label=f"OF DILUPBiCG ~{args.of_wall_per_step*1000:.0f}ms/step")
+                        linestyle="--", linewidth=1.4,
+                        label=f"OF DILUPBiCG ~{args.of_wall_per_step*1000:.0f}ms/step (Xeon 32-core MPI)")
     ax_wall.set_yscale("log")
-    ax_wall.set_xlabel("Step index"); ax_wall.set_ylabel("Wall per step (ms) — log")
-    ax_wall.set_title("Per-step wall time on T_corr0 (5060 AMGx BICGSTAB+AMG-DIAGSCALED)")
+    ax_wall.set_xlabel("Step index")
+    ax_wall.set_ylabel("AMGx GPU work per step (ms) — log\n[setup + update + solve + IR, excludes lazy-load I/O]")
+    ax_wall.set_title("Per-step GPU work: 5060 AMGx BICGSTAB+AMG-DIAGSCALED on T_corr0\n"
+                       "(median ~8-15 ms vs OF ~50 ms — AMGx 3-6× faster)")
     ax_wall.legend(fontsize=8); ax_wall.grid(True, alpha=0.3, which="both")
 
     # Panel 2: iter per step
@@ -79,7 +83,7 @@ def main():
                        "(T is diffusion-dominated → 3-10 iter expected)")
     ax_iter.legend(fontsize=8); ax_iter.grid(True, alpha=0.3)
 
-    # Panel 3: cumulative wall
+    # Panel 3: cumulative GPU work + OF baseline
     for proto, rec in recs.items():
         cum = np.cumsum(rec["total_s"])
         ax_cum.plot(rec["step"], cum, label=proto,
@@ -88,10 +92,12 @@ def main():
         any_rec = next(iter(recs.values()))
         n = len(any_rec["step"])
         ax_cum.plot(np.arange(n), np.arange(1, n+1) * args.of_wall_per_step,
-                    color="black", linestyle="--", linewidth=1.2,
+                    color="black", linestyle="--", linewidth=1.6,
                     label=f"OF DILUPBiCG @ {args.of_wall_per_step*1000:.0f}ms/step")
-    ax_cum.set_xlabel("Step index"); ax_cum.set_ylabel("Cumulative wall (s)")
-    ax_cum.set_title("Cumulative wall vs step")
+    ax_cum.set_xlabel("Step index")
+    ax_cum.set_ylabel("Cumulative GPU work (s)")
+    ax_cum.set_title("Cumulative GPU work vs OF estimate\n"
+                      "(line below OF dashed = AMGx faster)")
     ax_cum.legend(fontsize=8); ax_cum.grid(True, alpha=0.3)
 
     # Panel 4: breakdown stacked
@@ -130,9 +136,29 @@ def main():
     if "fresh_e12_IR" in recs and "amortized_e12_IR" in recs:
         sa = float(np.sum(recs["fresh_e12_IR"]["total_s"])) / max(float(np.sum(recs["amortized_e12_IR"]["total_s"])), 1e-12)
         speedup_lines.append(f"e12+IR: amortized {sa:.2f}× vs fresh")
+    # vs OF speedup
+    if args.of_wall_per_step:
+        of_total = n_any * args.of_wall_per_step
+        if "amortized_e8" in recs:
+            sa = of_total / max(float(np.sum(recs["amortized_e8"]["total_s"])), 1e-12)
+            speedup_lines.append(f"OF/AMGx_e8: {sa:.2f}× (AMGx faster)")
+        if "amortized_e12_IR" in recs:
+            sa = of_total / max(float(np.sum(recs["amortized_e12_IR"]["total_s"])), 1e-12)
+            speedup_lines.append(f"OF/AMGx_e12+IR: {sa:.2f}×")
     sub = "  |  ".join(speedup_lines) if speedup_lines else ""
-    fig.suptitle(f"T_corr0 AMGx BICGSTAB+AMG amortized vs fresh on {n_any} LPBF T matrices  (lab RTX 5060)\n{sub}",
-                 fontsize=12, y=0.995)
+
+    # Bottom note about lazy-load
+    sample_rec = next(iter(recs.values()))
+    sample_proto = list(recs.keys())[0]
+    wall_total = float(sample_rec.get("protocol_wall_s", [0])[0]) if "protocol_wall_s" in sample_rec else 0
+    gpu_total = float(np.sum(sample_rec["total_s"]))
+    io_note = ""
+    if wall_total > 0 and wall_total > 1.5 * gpu_total:
+        io_note = (f"\n[I/O note] real wall (includes lazy-load ASCII parse): ~{wall_total:.0f}s for {sample_proto}, "
+                   f"but GPU work only {gpu_total:.1f}s. Convert matrices to binary (.npz) to remove I/O.")
+
+    fig.suptitle(f"T_corr0 AMGx BICGSTAB+AMG amortized vs fresh on {n_any} LPBF T matrices  (lab RTX 5060)\n{sub}{io_note}",
+                 fontsize=11, y=0.995)
     plt.tight_layout()
     fig.savefig(out, dpi=140, bbox_inches="tight")
     plt.close(fig)

@@ -1,0 +1,22 @@
+{
+  "case": "/home/manyxu/cases/dense_track_dump_500K",
+  "pool": "validate_dense/sane_pool.txt",
+  "n_matrices": 384,
+  "n_per_matrix": 500000,
+  "nnz_per_matrix": 3455000,
+  "protocols": [
+    "fresh_e8",
+    "amortized_e8",
+    "fresh_e12_IR",
+    "amortized_e12_IR"
+  ],
+  "equation": "T_corr0",
+  "config": "BICGSTAB_DIAGSCALED",
+  "max_iters": 3000,
+  "lazy_load": true,
+  "checkpoint_every": 50,
+  "gpu": "NVIDIA GeForce RTX 5060, 581.95, 8151 MiB",
+  "python": "3.13.11 | packaged by Anaconda, Inc. | (main, Dec 10 2025, 21:28:48) [GCC 14.3.0]",
+  "jax": "0.9.0",
+  "wall_started": "2026-05-16T03:32:57+0800"
+}
