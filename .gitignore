@@ -65,3 +65,7 @@ dilu/amgx/build/
 
 # Worktrees (claude-managed)
 .claude/worktrees/
+
+# benchmark suite results — keep JSON only, never commit large npz
+results_*/pd/*.npz
+results_*/T/*.npz

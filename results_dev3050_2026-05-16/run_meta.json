@@ -1,0 +1,22 @@
+{
+  "hostname": "Yzk-laptop",
+  "python": "3.12.3",
+  "jax": "0.9.0",
+  "jax_devices": "[CudaDevice(id=0)]",
+  "wall_started": "2026-05-16T21:10:01+0800",
+  "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU, 580.97, 4096 MiB",
+  "git_sha": "2df674ff3604341cc18bd9ff1dc03ccc6482272a",
+  "suite": "/home/yzk/benchmark_suite_v1",
+  "equations": [
+    "pd",
+    "T"
+  ],
+  "protocols": [
+    "fresh_e8",
+    "amortized_e8",
+    "fresh_e12_IR",
+    "amortized_e12_IR"
+  ],
+  "max_iters": 3000,
+  "save_x": true
+}

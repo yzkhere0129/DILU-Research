@@ -85,7 +85,7 @@ def fig_wall_compare(all_data, output, of_baseline=True):
     hosts = list(all_data.keys())
     n_eq = 2
 
-    fig, axes = plt.subplots(1, n_eq, figsize=(16, 6))
+    fig, axes = plt.subplots(1, n_eq, figsize=(14, 5.5))
     if n_eq == 1: axes = [axes]
     for ax, eq in zip(axes, ("pd", "T")):
         # Bars: x = protocols, hue = hostname
@@ -124,7 +124,7 @@ def fig_wall_compare(all_data, output, of_baseline=True):
     fig.suptitle(f"DILU Suite v1: AMGx wall comparison ({len(hosts)} HW × 2 equations × 4 protocols)",
                   fontsize=12, y=1.02)
     plt.tight_layout()
-    fig.savefig(output, dpi=140, bbox_inches="tight")
+    fig.savefig(output, dpi=110, bbox_inches="tight")
     plt.close(fig)
     print(f"→ {output}")
 
@@ -135,7 +135,7 @@ def fig_per_step(results_dir, all_data, output):
     """Per-step wall trajectory, colored by physical phase, 4 protocols."""
     host = hostname_from_path(results_dir)
     data = all_data[host]
-    fig, axes = plt.subplots(2, 1, figsize=(16, 9), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
     for ax, eq in zip(axes, ("pd", "T")):
         recs = data.get(eq, {})
         for proto in PROTOCOLS:
@@ -159,7 +159,7 @@ def fig_per_step(results_dir, all_data, output):
     axes[-1].set_xlabel(f"Matrix index (0..49, ordered by phase: " +
                          " | ".join(f"{p}" for p in PHASE_ORDER) + ")")
     plt.tight_layout()
-    fig.savefig(output, dpi=140, bbox_inches="tight")
+    fig.savefig(output, dpi=110, bbox_inches="tight")
     plt.close(fig)
     print(f"→ {output}")
 
@@ -168,7 +168,7 @@ def fig_per_step(results_dir, all_data, output):
 
 def fig_precision(results_dir, output):
     """Bar chart: max|x - x_truth| per protocol per phase, both eq."""
-    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
     for ax, eq in zip(axes, ("pd", "T")):
         prec = load_precision(results_dir, eq)
         if prec is None:
@@ -215,7 +215,7 @@ def fig_precision(results_dir, output):
     fig.suptitle("DILU Suite v1: solution precision vs ε-machine truth (50 matrices × 4 phases)",
                   fontsize=12, y=1.02)
     plt.tight_layout()
-    fig.savefig(output, dpi=140, bbox_inches="tight")
+    fig.savefig(output, dpi=110, bbox_inches="tight")
     plt.close(fig)
     print(f"→ {output}")
 
@@ -225,7 +225,7 @@ def fig_precision(results_dir, output):
 def fig_iter(results_dir, all_data, output):
     host = hostname_from_path(results_dir)
     data = all_data[host]
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     for ax, eq in zip(axes, ("pd", "T")):
         recs = data.get(eq, {})
         positions = []; iters_per_proto = []; colors = []; labels = []
@@ -244,7 +244,7 @@ def fig_iter(results_dir, all_data, output):
         ax.tick_params(axis="x", rotation=15, labelsize=8)
         ax.grid(True, axis="y", alpha=0.3)
     plt.tight_layout()
-    fig.savefig(output, dpi=140, bbox_inches="tight")
+    fig.savefig(output, dpi=110, bbox_inches="tight")
     plt.close(fig)
     print(f"→ {output}")
 
