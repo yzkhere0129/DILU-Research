@@ -1,0 +1,263 @@
+{
+  "schema_version": "1.0",
+  "n_matrices": 50,
+  "source_pool": "validate_dense/sane_pool.txt",
+  "phases": [
+    "pre_melt",
+    "melt",
+    "evap_early",
+    "evap_late"
+  ],
+  "matrices": [
+    {
+      "t_s": 5e-08,
+      "ts": "5e-08",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 7.7e-08,
+      "ts": "7.7e-08",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 1.04e-07,
+      "ts": "1.04e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 1.31e-07,
+      "ts": "1.31e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 1.58e-07,
+      "ts": "1.58e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 1.88e-07,
+      "ts": "1.88e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 2.15e-07,
+      "ts": "2.15e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 2.42e-07,
+      "ts": "2.42e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 2.69e-07,
+      "ts": "2.69e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 2.99e-07,
+      "ts": "2.99e-07",
+      "phase": "pre_melt"
+    },
+    {
+      "t_s": 3.02e-07,
+      "ts": "3.02e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 3.23e-07,
+      "ts": "3.23e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 3.44e-07,
+      "ts": "3.44e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 3.65e-07,
+      "ts": "3.65e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 3.86e-07,
+      "ts": "3.86e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 4.07e-07,
+      "ts": "4.07e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 4.28e-07,
+      "ts": "4.28e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 4.49e-07,
+      "ts": "4.49e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 4.7e-07,
+      "ts": "4.7e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 4.91e-07,
+      "ts": "4.91e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 5.12e-07,
+      "ts": "5.12e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 5.33e-07,
+      "ts": "5.33e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 5.54e-07,
+      "ts": "5.54e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 5.75e-07,
+      "ts": "5.75e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 5.99e-07,
+      "ts": "5.99e-07",
+      "phase": "melt"
+    },
+    {
+      "t_s": 6.02e-07,
+      "ts": "6.02e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 6.35e-07,
+      "ts": "6.35e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 6.68e-07,
+      "ts": "6.68e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 7.01e-07,
+      "ts": "7.01e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 7.34e-07,
+      "ts": "7.34e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 7.67e-07,
+      "ts": "7.67e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 8e-07,
+      "ts": "8e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 8.33e-07,
+      "ts": "8.33e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 8.66e-07,
+      "ts": "8.66e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 8.99e-07,
+      "ts": "8.99e-07",
+      "phase": "evap_early"
+    },
+    {
+      "t_s": 9.02e-07,
+      "ts": "9.02e-07",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 9.23e-07,
+      "ts": "9.23e-07",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 9.44e-07,
+      "ts": "9.44e-07",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 9.65e-07,
+      "ts": "9.65e-07",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 9.86e-07,
+      "ts": "9.86e-07",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.007e-06,
+      "ts": "1.007e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.028e-06,
+      "ts": "1.028e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.049e-06,
+      "ts": "1.049e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.07e-06,
+      "ts": "1.07e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.091e-06,
+      "ts": "1.091e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.112e-06,
+      "ts": "1.112e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.133e-06,
+      "ts": "1.133e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.154e-06,
+      "ts": "1.154e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.175e-06,
+      "ts": "1.175e-06",
+      "phase": "evap_late"
+    },
+    {
+      "t_s": 1.199e-06,
+      "ts": "1.199e-06",
+      "phase": "evap_late"
+    }
+  ]
+}
