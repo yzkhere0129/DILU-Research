@@ -62,11 +62,21 @@ PROTOCOL_CONFIGS = {
 
 
 def load_matrix_npz(npz_path: Path):
+    """Load A, b, x_OF from binary npz. Auto sign-flips negative-diagonal
+    matrices (OF lduMatrix exports pd with negative diag — flip to SPD form
+    for AMGx PCG/BICGSTAB, and flip x_OF too so x_OF ~ x_AMGx)."""
     d = np.load(npz_path)
     A = sp.csr_matrix((d["data"], d["indices"], d["indptr"]),
                        shape=tuple(d["shape"]))
     b = d["b"]
     x_OF = d["x_OF"]
+    diag_mean = float(np.mean(A.diagonal()))
+    sign_flipped = diag_mean < 0
+    if sign_flipped:
+        A = -A
+        b = -b
+        # x_OF satisfies A_orig x = b_orig, i.e. (-A) x = (-b), so x_OF same.
+        # No flip needed for x_OF.
     return A, b, x_OF
 
 
