@@ -235,7 +235,7 @@ def fig_iter(results_dir, all_data, output):
             iters_per_proto.append(r["iters"])
             colors.append(PROTO_COLOR[proto])
             labels.append(proto)
-        bp = ax.boxplot(iters_per_proto, labels=labels, patch_artist=True,
+        bp = ax.boxplot(iters_per_proto, tick_labels=labels, patch_artist=True,
                          showmeans=True, meanline=True)
         for patch, c in zip(bp["boxes"], colors):
             patch.set_facecolor(c); patch.set_alpha(0.6)

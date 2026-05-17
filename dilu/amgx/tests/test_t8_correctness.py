@@ -6,7 +6,21 @@ Acceptance (design §6.1):
 Phase 2 DILU-PCG is treated as the reference. Both solvers converge the same
 linear system Ax=b (SPD) to tol 1e-10; different preconditioners reach the
 same unique solution within float64 noise.
+
+Cross-phase dependency: requires the sibling `dilu.cusparse` module to be
+importable. When `dilu.amgx` is packaged standalone (without the rest of the
+DILU-Research monorepo), this test is skipped — `test_smoke.py` and
+`test_regression_oracle.py` provide AMGx-only coverage.
 """
+import pytest
+
+# Skip cleanly if the cuSPARSE reference stack is not in the import path
+# (e.g. when dilu.amgx ships as a standalone package).
+pytest.importorskip(
+    "dilu.cusparse.python",
+    reason="dilu.cusparse not importable — running standalone dilu.amgx package",
+)
+
 import conftest  # noqa: F401
 
 import numpy as np

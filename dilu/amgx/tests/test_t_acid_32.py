@@ -11,7 +11,17 @@ This test DOES NOT attempt to tune config on failure. Per the Phase 4 brief
 
 Also runs a reference solve at max_iters=200 to confirm AMG-PCG does converge
 on this problem (eliminates "AMG just divergent" as a false alarm).
+
+Cross-phase dependency: reuses `dilu.cusparse.tests.physical_benchmark`
+problem builders. Skipped when running standalone dilu.amgx packaging.
 """
+import pytest
+
+pytest.importorskip(
+    "dilu.cusparse.tests.physical_benchmark",
+    reason="dilu.cusparse not importable — running standalone dilu.amgx package",
+)
+
 import conftest  # noqa: F401
 
 import os

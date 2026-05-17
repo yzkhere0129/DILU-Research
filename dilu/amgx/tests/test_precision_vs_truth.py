@@ -1,7 +1,16 @@
 """Regression test: AMGx + IR achieves machine precision vs scipy spsolve truth.
 
-Acceptance: rel_vs_truth ≤ 1e-10 on at least one pd and one T LPBF dump.
-(Headline result is ~1e-15, so 1e-10 is a generous floor.)
+Two modes:
+
+  1. Fixture mode (always runs): uses self-contained 12x12x12 synthetic
+     matrices under `tests/fixtures/{pd,T}_tiny.npz`. No external data
+     needed. Acceptance: rel_vs_truth <= 1e-10 (headline ~1e-15).
+
+  2. LaserbeamFoam mode (env-gated): runs against real LPBF dumps when
+     `DILU_AMGX_LMF_ROOT` is set, e.g.
+         export DILU_AMGX_LMF_ROOT=/path/to/LaserbeamFoam
+     and the cross-phase reader `dilu.benchmark.openfoam_crosscheck.reader`
+     is importable. Tests are silently skipped otherwise.
 
 Run: pytest dilu/amgx/tests/test_precision_vs_truth.py -v
 """
@@ -16,57 +25,143 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.sparse as sp
 from scipy.sparse.linalg import spsolve
 
 from jax import config as _jc
 _jc.update("jax_enable_x64", True)
 
 from dilu.amgx.python import amgx_solve_with_refinement
-from dilu.benchmark.openfoam_crosscheck.reader import load_ofmm, normalize_sign
 
 
 REL_VS_TRUTH_THRESHOLD = 1e-10  # user spec; actual achieved is ~1e-15
 REL_VS_TRUTH_TIGHT     = 1e-13  # regression guard; catches drops from ~1e-15
 
-CASES = [
-    ("pd",
-     "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/dumper_pipeline_test/"
-     "postProcessing/matrices/2.64e-12/pd_corr0"),
-    ("T",
-     "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/dumper_pipeline_test/"
-     "postProcessing/matrices/2.64e-12/T_corr0"),
-    ("pd",
-     "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/LPBF_sanity/"
-     "postProcessing/matrices/2.636507509e-12/pd_corr0"),
-    ("T",
-     "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/LPBF_sanity/"
-     "postProcessing/matrices/2.636507509e-12/T_corr0"),
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+# ---------------------------------------------------------------------------
+# Mode 1: self-contained fixture tests (always run)
+# ---------------------------------------------------------------------------
+
+
+def _load_fixture(name):
+    """Load a tests/fixtures/{name}_tiny.npz fixture.
+
+    Returns (A_csr, b, x_truth, sign_flipped_bool). For pd_tiny the
+    matrix is stored in OpenFOAM negative-diagonal convention, so the
+    AMGx wrapper's load helper must sign-flip — we do the same here
+    inside `_solve_and_check` to keep this test self-contained.
+    """
+    p = FIXTURES_DIR / f"{name}_tiny.npz"
+    if not p.exists():
+        pytest.skip(f"fixture not generated: {p}; "
+                     f"run dilu/amgx/tests/fixtures/generate_fixtures.py")
+    d = np.load(p)
+    A = sp.csr_matrix((d["data"], d["indices"], d["indptr"]),
+                       shape=tuple(d["shape"]))
+    b = d["b"]
+    x_truth = d["x_truth"]
+    sign_flipped = bool(d["spd_after_flip"][0])
+    return A, b, x_truth, sign_flipped
+
+
+def _solve_and_check(name, eq_kind, threshold, n_refine):
+    A, b, x_truth, sign_flipped = _load_fixture(name)
+    if sign_flipped:
+        # Mimic the production loader (bench/suite/run_benchmark.py).
+        A_solve = (-A).tocsr()
+        b_solve = -b
+    else:
+        A_solve, b_solve = A, b
+    x0 = np.zeros_like(b_solve)
+    res = amgx_solve_with_refinement(
+        A_solve, b_solve, x0,
+        eq_kind=eq_kind, tol=1e-12, n_refine=n_refine, max_iters=500,
+    )
+    denom = max(float(np.max(np.abs(x_truth))), 1e-300)
+    rel = float(np.max(np.abs(res["x"] - x_truth)) / denom)
+    print(f"  fixture {name} ({eq_kind}): rel_vs_truth={rel:.3e}, "
+          f"primary_iters={res['primary_iters']}, refine_iters={res['refine_iters']}")
+    assert rel <= threshold, f"{name} {eq_kind} fixture: rel={rel:.3e} > {threshold}"
+
+
+def test_fixture_pd_amgx_ir_meets_user_spec():
+    """pd fixture: AMGx + 1 IR step reaches user-spec 1e-10 vs scipy."""
+    _solve_and_check("pd", "pd", REL_VS_TRUTH_THRESHOLD, n_refine=1)
+
+
+def test_fixture_T_amgx_ir_meets_user_spec():
+    """T fixture: AMGx + 1 IR step reaches user-spec 1e-10 vs scipy."""
+    _solve_and_check("T", "T", REL_VS_TRUTH_THRESHOLD, n_refine=1)
+
+
+def test_fixture_pd_amgx_ir_meets_tight_floor():
+    """pd fixture tight: regression guard at 1e-13."""
+    _solve_and_check("pd", "pd", REL_VS_TRUTH_TIGHT, n_refine=1)
+
+
+def test_fixture_T_amgx_ir_meets_tight_floor():
+    """T fixture tight: regression guard at 1e-13."""
+    _solve_and_check("T", "T", REL_VS_TRUTH_TIGHT, n_refine=1)
+
+
+# ---------------------------------------------------------------------------
+# Mode 2: LaserbeamFoam-backed tests (env-gated)
+# ---------------------------------------------------------------------------
+
+_LMF_ROOT = os.environ.get("DILU_AMGX_LMF_ROOT")
+
+
+def _lmf_case(case_dir: str, ts: str, eq: str) -> Path:
+    """Resolve a LaserbeamFoam matrix dump path under $DILU_AMGX_LMF_ROOT."""
+    if _LMF_ROOT is None:
+        return Path("/__unset__/__skip__")
+    return Path(_LMF_ROOT) / "tutorials" / "laserMeltFoam" / case_dir / \
+        "postProcessing" / "matrices" / ts / f"{eq}_corr0"
+
+
+# Try to import the cross-phase reader; if unavailable, the fixture tests
+# above still run and the LMF-mode tests will skip individually at runtime.
+# This is intentionally NOT pytest.importorskip — that would skip the whole
+# module including the self-contained fixture tests.
+try:
+    from dilu.benchmark.openfoam_crosscheck.reader import load_ofmm, normalize_sign  # noqa
+    _HAS_LMF_READER = True
+except ImportError:
+    _HAS_LMF_READER = False
+    load_ofmm = normalize_sign = None  # placeholders for type checkers
+
+
+LMF_CASES = [
+    ("pd", _lmf_case("dumper_pipeline_test", "2.64e-12",         "pd")),
+    ("T",  _lmf_case("dumper_pipeline_test", "2.64e-12",         "T")),
+    ("pd", _lmf_case("LPBF_sanity",          "2.636507509e-12",  "pd")),
+    ("T",  _lmf_case("LPBF_sanity",          "2.636507509e-12",  "T")),
 ]
 
 
-@pytest.mark.parametrize("eq_kind,matrix_dir", CASES)
+@pytest.mark.parametrize("eq_kind,matrix_dir", LMF_CASES)
 def test_amgx_with_refinement_reaches_machine_precision(eq_kind, matrix_dir):
-    """AMGx + 1 IR step ≤ 1e-10 vs scipy spsolve truth (typically ~1e-15)."""
-    p = Path(matrix_dir)
-    if not p.exists():
-        pytest.skip(f"dump not present: {p}")
+    """AMGx + 1 IR step <= 1e-10 vs scipy spsolve truth (typically ~1e-15)."""
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not matrix_dir.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {matrix_dir}")
 
-    bundle = load_ofmm(p)
+    bundle = load_ofmm(matrix_dir)
     bundle = normalize_sign(bundle)
     A, b, x0 = bundle.A, bundle.b, bundle.x0
 
-    # Truth via direct LU
     x_truth = spsolve(A.tocsc(), b)
     denom = max(float(np.max(np.abs(x_truth))), 1e-300)
 
-    # AMGx + IR
     res = amgx_solve_with_refinement(
         A, b, x0,
         eq_kind=eq_kind, tol=1e-12, n_refine=1, max_iters=500,
     )
 
     rel_vs_truth = float(np.max(np.abs(res["x"] - x_truth)) / denom)
-    print(f"  [{eq_kind}] {p.parent.name} N={A.shape[0]}: "
+    print(f"  [{eq_kind}] {matrix_dir.parent.name} N={A.shape[0]}: "
           f"rel_vs_truth={rel_vs_truth:.3e}, primary_iters={res['primary_iters']}, "
           f"refine_iters={res['refine_iters']}")
 
@@ -76,20 +171,21 @@ def test_amgx_with_refinement_reaches_machine_precision(eq_kind, matrix_dir):
     )
 
 
-@pytest.mark.parametrize("eq_kind,matrix_dir", CASES)
+@pytest.mark.parametrize("eq_kind,matrix_dir", LMF_CASES)
 def test_amgx_with_refinement_meets_tight_floor(eq_kind, matrix_dir):
-    """Tight regression guard: AMGx + 1 IR step ≤ 1e-13 vs scipy truth.
+    """Tight regression guard: AMGx + 1 IR step <= 1e-13 vs scipy truth.
 
     Separate from the user-spec 1e-10 gate so that a regression from the
     achieved ~1e-15 down to ~1e-12 (still within user spec but worse) is
     caught in CI.  Same underlying solve as the previous test, only the
     threshold differs.
     """
-    p = Path(matrix_dir)
-    if not p.exists():
-        pytest.skip(f"dump not present: {p}")
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not matrix_dir.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {matrix_dir}")
 
-    bundle = load_ofmm(p)
+    bundle = load_ofmm(matrix_dir)
     bundle = normalize_sign(bundle)
     A, b, x0 = bundle.A, bundle.b, bundle.x0
 
@@ -102,7 +198,7 @@ def test_amgx_with_refinement_meets_tight_floor(eq_kind, matrix_dir):
     )
 
     rel_vs_truth = float(np.max(np.abs(res["x"] - x_truth)) / denom)
-    print(f"  [{eq_kind}] {p.parent.name}: tight rel_vs_truth={rel_vs_truth:.3e}")
+    print(f"  [{eq_kind}] {matrix_dir.parent.name}: tight rel_vs_truth={rel_vs_truth:.3e}")
     assert rel_vs_truth <= REL_VS_TRUTH_TIGHT, (
         f"REGRESSION: rel_vs_truth={rel_vs_truth:.3e} "
         f"> tight floor {REL_VS_TRUTH_TIGHT} "
@@ -111,14 +207,12 @@ def test_amgx_with_refinement_meets_tight_floor(eq_kind, matrix_dir):
 
 
 def test_no_refinement_still_meets_1e10_on_easy_cases():
-    """Even without IR, AMGx tol=1e-12 should reach 1e-10 on most cases.
-
-    Tests T (well-conditioned) where IR is overkill.
-    """
-    p = Path("/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/dumper_pipeline_test/"
-             "postProcessing/matrices/2.64e-12/T_corr0")
-    if not p.exists():
-        pytest.skip(f"dump not present: {p}")
+    """Even without IR, AMGx tol=1e-12 should reach 1e-10 on most cases."""
+    p = _lmf_case("dumper_pipeline_test", "2.64e-12", "T")
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not p.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {p}")
 
     bundle = load_ofmm(p)
     bundle = normalize_sign(bundle)
@@ -137,31 +231,24 @@ def test_no_refinement_still_meets_1e10_on_easy_cases():
     )
 
 
-# ---------------------------------------------------------------------------
-# Gap-coverage tests (added 2026-05-04)
-# ---------------------------------------------------------------------------
+# Lazy resolution: re-evaluate when the test runs, not at collection
+def _sanity_pd():
+    return _lmf_case("LPBF_sanity", "2.636507509e-12", "pd")
 
-_SANITY_PD = Path(
-    "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/LPBF_sanity/"
-    "postProcessing/matrices/2.636507509e-12/pd_corr0"
-)
-_SANITY_T = Path(
-    "/home/yzk/LaserbeamFoam/tutorials/laserMeltFoam/LPBF_sanity/"
-    "postProcessing/matrices/2.636507509e-12/T_corr0"
-)
+
+def _sanity_T():
+    return _lmf_case("LPBF_sanity", "2.636507509e-12", "T")
 
 
 def test_n_refine_5_does_not_regress_accuracy():
-    """n_refine=5 should not make accuracy worse than n_refine=1.
+    """n_refine=5 should not make accuracy worse than n_refine=1."""
+    p = _sanity_pd()
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not p.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {p}")
 
-    Extra IR steps should not regress: each step re-solves the residual
-    equation.  Checks that the returned `refine_iters` list has length 5 and
-    that final rel_vs_truth still meets 1e-10.
-    """
-    if not _SANITY_PD.exists():
-        pytest.skip(f"dump not present: {_SANITY_PD}")
-
-    bundle = load_ofmm(_SANITY_PD)
+    bundle = load_ofmm(p)
     bundle = normalize_sign(bundle)
     A, b, x0 = bundle.A, bundle.b, bundle.x0
 
@@ -173,11 +260,9 @@ def test_n_refine_5_does_not_regress_accuracy():
         eq_kind="pd", tol=1e-12, n_refine=5, max_iters=500,
     )
 
-    # Structural: exactly 5 IR steps were executed
     assert len(res["refine_iters"]) == 5, (
         f"Expected 5 refine_iters entries, got {len(res['refine_iters'])}"
     )
-    # Accuracy: still meets spec
     rel = float(np.max(np.abs(res["x"] - x_truth)) / denom)
     print(f"  n_refine=5 rel_vs_truth={rel:.3e}")
     assert rel <= REL_VS_TRUTH_THRESHOLD, (
@@ -186,17 +271,14 @@ def test_n_refine_5_does_not_regress_accuracy():
 
 
 def test_zero_rhs_returns_zero_solution():
-    """When b=0 the exact solution is x=0; AMGx+IR must return near-zero.
+    """When b=0 the exact solution is x=0; AMGx+IR must return near-zero."""
+    p = _sanity_pd()
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not p.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {p}")
 
-    This catches a bug where IR would compute r = 0 - A*0 = 0 and the
-    delta solve would nudge x away from 0 via an uninitialized initial guess.
-    Threshold is generous (1e-10 relative to ‖A‖) because b_norm2 guard sets
-    denominator=1.0 and x_truth = spsolve(A, 0) = 0.
-    """
-    if not _SANITY_PD.exists():
-        pytest.skip(f"dump not present: {_SANITY_PD}")
-
-    bundle = load_ofmm(_SANITY_PD)
+    bundle = load_ofmm(p)
     bundle = normalize_sign(bundle)
     A = bundle.A
     n = A.shape[0]
@@ -208,7 +290,6 @@ def test_zero_rhs_returns_zero_solution():
         eq_kind="pd", tol=1e-12, n_refine=1, max_iters=500,
     )
 
-    # x should be exactly 0; allow floating-point slop relative to ‖A‖_F
     abs_err = float(np.max(np.abs(res["x"])))
     A_scale = float(np.abs(A.data).max())
     print(f"  zero-rhs abs_err={abs_err:.3e}, A_max={A_scale:.3e}")
@@ -220,9 +301,7 @@ def test_zero_rhs_returns_zero_solution():
 def test_eq_kind_T_config_selects_bicgstab():
     """eq_kind='T' must select BICGSTAB config, not PCG.
 
-    Parses the config string actually passed to with_tolerance for both
-    eq_kind values and asserts the outer solver field is correct.  This is a
-    pure-Python config-routing test — no AMGx call needed.
+    Pure-Python config-routing test; no external data, no GPU. Always runs.
     """
     import json
     from dilu.amgx.python.config import (
@@ -243,20 +322,18 @@ def test_eq_kind_T_config_selects_bicgstab():
 
 
 def test_plan_released_after_with_block():
-    """Plan._released must be True after the with-block exits (no leak).
-
-    Regression guard: if Plan.__exit__ is accidentally removed, _released
-    stays False and the AMGx handle leaks (eventually crashes on GPU OOM).
-    Uses the real LPBF matrix so the Plan actually allocates GPU memory.
-    """
-    if not _SANITY_T.exists():
-        pytest.skip(f"dump not present: {_SANITY_T}")
+    """Plan._released must be True after the with-block exits (no leak)."""
+    p = _sanity_T()
+    if not _HAS_LMF_READER:
+        pytest.skip("dilu.benchmark reader unavailable (standalone packaging)")
+    if _LMF_ROOT is None or not p.exists():
+        pytest.skip(f"DILU_AMGX_LMF_ROOT unset or dump absent: {p}")
 
     import jax.numpy as jnp
     from dilu.amgx.python.plan import Plan
     from dilu.amgx.python.config import CLASSICAL_V_DIAGSCALED_BICGSTAB, with_tolerance
 
-    bundle = load_ofmm(_SANITY_T)
+    bundle = load_ofmm(p)
     bundle = normalize_sign(bundle)
     A = bundle.A
 

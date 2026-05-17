@@ -204,11 +204,14 @@ static ffi::Error AmgxSetupImpl(
   std::fprintf(stderr, "[dilu_amgx verbose] setup complete\n");
 #endif
 
-  // Register in plan cache, write 8-byte token to device output.
+  // Register in plan cache, write 8-byte token to device output. token is
+  // stack-local; synchronize before returning so the H→D copy is guaranteed
+  // to consume it (see C1 fix in amgx_solve.cc for rationale).
   uint64_t token = plan_cache_insert(entry);
   CHECK_CUDA(cudaMemcpyAsync(token_out->typed_data(), &token,
                              sizeof(uint64_t),
                              cudaMemcpyHostToDevice, stream));
+  CHECK_CUDA(cudaStreamSynchronize(stream));
   return ffi::Error::Success();
 }
 

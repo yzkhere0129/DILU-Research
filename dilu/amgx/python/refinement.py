@@ -14,14 +14,26 @@ import time
 
 import numpy as np
 
-from jax import config as _jc
-_jc.update("jax_enable_x64", True)   # AMGx FFI expects float64
+# NOTE: AMGx FFI expects float64 throughout. The caller is responsible for
+# enabling x64 mode in JAX (either globally via `jax.config.update(
+# "jax_enable_x64", True)` at process start, or per-call via the public
+# `enable_x64()` helper below). Importing this module MUST NOT mutate global
+# JAX state — that would silently flip a downstream user's float32 pipeline
+# the moment they pulled in `dilu.amgx`.
 import jax.numpy as jnp
 
 from .plan import Plan
 from .config import (
     CLASSICAL_V_DIAGSCALED, CLASSICAL_V_DIAGSCALED_BICGSTAB, with_tolerance,
 )
+
+
+def enable_x64() -> None:
+    """Opt-in helper: switch JAX to float64. Equivalent to
+    `jax.config.update("jax_enable_x64", True)`. Call this once at process
+    start if you intend to use AMGx and have not already enabled x64."""
+    from jax import config as _jc
+    _jc.update("jax_enable_x64", True)
 
 
 def amgx_solve_with_refinement(

@@ -94,6 +94,7 @@ static ffi::Error AmgxUpdateCoefficientsImpl(
     int32_t status = static_cast<int32_t>(rc);
     cudaMemcpyAsync(status_out->typed_data(), &status, sizeof(int32_t),
                     cudaMemcpyHostToDevice, stream);
+    cudaStreamSynchronize(stream);  // status is stack-local; see C1 fix
     return ffi::Error(XLA_FFI_Error_Code_INTERNAL,
                       std::string("update_coefficients: replace: ") +
                           amgx_rc_str(rc));
@@ -110,6 +111,12 @@ static ffi::Error AmgxUpdateCoefficientsImpl(
   if (e != cudaSuccess) {
     return ffi::Error(XLA_FFI_Error_Code_INTERNAL,
                       std::string("update_coefficients: status write: ") +
+                          cudaGetErrorString(e));
+  }
+  e = cudaStreamSynchronize(stream);  // status is stack-local; see C1 fix
+  if (e != cudaSuccess) {
+    return ffi::Error(XLA_FFI_Error_Code_INTERNAL,
+                      std::string("update_coefficients: status sync: ") +
                           cudaGetErrorString(e));
   }
   if (rc != AMGX_RC_OK) {

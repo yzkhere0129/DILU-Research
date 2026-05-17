@@ -87,7 +87,9 @@ def main(phase: str, t: str):
     T_max = float(vol.max())
     vmin, vmax = T_AMBIENT, max(T_max, T_HAZ * 1.1)
 
-    fig, axes = plt.subplots(2, 4, figsize=(20, 9))
+    # aspect="equal" + 4:1 height ratio so XY (200×800) shows its real 1:4 shape
+    fig, axes = plt.subplots(2, 4, figsize=(14, 16),
+                              gridspec_kw={"height_ratios": [4, 1]})
     cmap = "hot"
     norm = Normalize(vmin=vmin, vmax=vmax)
 
@@ -113,6 +115,7 @@ def main(phase: str, t: str):
         if col == 0: ax.set_ylabel("y (μm) — laser scan axis", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, ny*dx)
         ax.tick_params(labelsize=7)
+        ax.set_aspect("equal")
 
     # ---- Row 2: xz slices at 4 y-positions ----
     for col, y_um in enumerate(Y_SLICES_UM):
@@ -134,6 +137,7 @@ def main(phase: str, t: str):
         if col == 0: ax.set_ylabel("z (μm) — depth", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, nz*dx)
         ax.tick_params(labelsize=7)
+        ax.set_aspect("equal")
 
     cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),
                          ax=axes.ravel().tolist(), shrink=0.7, pad=0.02,

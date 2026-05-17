@@ -39,13 +39,25 @@ static ffi::Error AmgxReleaseImpl(
                       std::string("amgx_release: token sync: ") +
                           cudaGetErrorString(e));
   }
+  // Idempotent contract (matches Python docstring in wrapper.py:86 and
+  // plan.py:90-94): 0 = success, including the case where the token was
+  // already absent. Non-zero is reserved for a future "actually failed to
+  // tear down" condition. The previous semantics (1 = removed, 0 = unknown)
+  // inverted the convention versus the Python layer.
   bool removed = plan_cache_remove(token_host);
-  int32_t status = removed ? 1 : 0;
+  (void)removed;
+  int32_t status = 0;
   e = cudaMemcpyAsync(status_out->typed_data(), &status, sizeof(int32_t),
                       cudaMemcpyHostToDevice, stream);
   if (e != cudaSuccess) {
     return ffi::Error(XLA_FFI_Error_Code_INTERNAL,
                       std::string("amgx_release: status write: ") +
+                          cudaGetErrorString(e));
+  }
+  e = cudaStreamSynchronize(stream);
+  if (e != cudaSuccess) {
+    return ffi::Error(XLA_FFI_Error_Code_INTERNAL,
+                      std::string("amgx_release: status sync: ") +
                           cudaGetErrorString(e));
   }
   return ffi::Error::Success();

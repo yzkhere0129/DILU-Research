@@ -9,17 +9,17 @@ at 64^3 per docs/benchmark/phase3_scaling_64_128.md §6):
   - Test A: max|∇·u| ≤ 4.1e-8 after projection. (Phase 2 baseline at 64^3:
     3.78e-8; Phase 3: 1.25e-8.)
   - Test B: ‖u‖∞ @ step 10 ≤ 3.0e-6; max|div u| ≤ 1e-12 per step.
-    Both Phase 2 and Phase 3 at 64^3 produced ||u||inf=2.754e-6 exactly;
-    that number is a CSF-discretization parasitic-current artifact,
-    independent of the linear solver. We allow ≤3e-6 for the Phase 4 AMG
-    number — a match with Phase 2/3 within float64 noise is PASS; a
-    departure would indicate the AMG solver is doing something different
-    to the projection residual than DILU does.
 
-Also writes the plots referenced in the Phase 4 report:
-  bench/plots/scale_64/divergence_map_AMG_64.png
-  bench/plots/scale_64/spurious_currents_AMG_64.png
+Cross-phase dependency: reuses `dilu.cusparse.tests.physical_benchmark`
+problem builders. Skipped when running standalone dilu.amgx packaging.
 """
+import pytest
+
+pytest.importorskip(
+    "dilu.cusparse.tests.physical_benchmark",
+    reason="dilu.cusparse not importable — running standalone dilu.amgx package",
+)
+
 import conftest  # noqa: F401
 
 import os

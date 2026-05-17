@@ -69,3 +69,40 @@ dilu/amgx/build/
 # benchmark suite results — keep JSON only, never commit large npz
 results_*/pd/*.npz
 results_*/T/*.npz
+
+# ---- showcase branch: exclude large raw dumps / archives from public history ----
+# These tarballs (~1.2 GB total) are reproducible from the OpenFOAM cases; do
+# not ship them in a portfolio branch.
+*.tgz
+*.tar.gz
+*.tar
+# Per-step LPBF dumps (binary npz, reproducible)
+LPBF_lab32_dump/
+single_track_dump/
+# Audit raw runner npz outputs (the analysis dirs + summary md are kept)
+audit_overnight_20260509/xeon_validation/results/
+audit_overnight_20260509/xeon_validation/logs/
+audit_overnight_20260509/xeon_validation/env_*.txt
+audit_overnight_20260509/lab_5060_replay/results_*/
+# bench fixture npzs in dilu/amgx/bench (kept on dev/lab boxes only)
+dilu/amgx/bench/*.npz
+dilu/amgx/bench/plots/
+dilu/amgx/_scratch/
+# benchmark-suite raw replay outputs (summary.json + run_meta.json kept)
+results_dev3050_*/pd/
+results_dev3050_*/T/
+results_*/pd/
+results_*/T/
+# validate_dense + xeon_validation top-level scratch outputs (sane_pool.txt kept)
+validate_dense/*.npz
+xeon_validation/results/
+xeon_validation/logs/
+# Top-level xeon_validation/ is the earlier draft of audit_overnight_20260509/xeon_validation/.
+# The audited version is the one we ship; this duplicate stays local-only.
+/xeon_validation/
+# build dirs anywhere
+**/build/
+**/dist/
+**/_scratch/
+# AI session memory
+memory/

@@ -1,0 +1,40 @@
+# Source distribution manifest for dilu-amgx.
+# pyproject.toml ships the Python package; this file ensures the C++ source,
+# the CMake build wrapper, the test harness, the precision fixtures, and the
+# documentation suite ride along.
+
+# Build system
+include CMakeLists.txt
+include build.sh
+
+# Native sources (required to build libdilu_amgx.so)
+recursive-include cpp *.cc *.h *.cuh *.cu
+
+# Default AMGx configs (JSON)
+recursive-include configs *.json
+
+# Test harness + precision fixtures (CI relies on these)
+include tests/conftest.py
+include tests/_harness.py
+recursive-include tests/fixtures *.npz *.py
+
+# Documentation suite
+include README.md
+include INSTALL.md
+include USAGE.md
+include API.md
+include CHANGELOG.md
+include LICENSE
+include REPRODUCE.md
+include KNOWN_GOTCHAS.md
+include CODE_REVIEW.md
+include PACKAGING_REVIEW.md
+include TEST_AUDIT.md
+
+# Excludes (the _scratch dir is research-only)
+prune _scratch
+prune build
+prune dist
+prune *.egg-info
+global-exclude *.pyc
+global-exclude __pycache__

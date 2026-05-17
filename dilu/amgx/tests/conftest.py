@@ -17,3 +17,12 @@ _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.normpath(os.path.join(_THIS_DIR, "..", "..", ".."))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
+
+
+def pytest_configure(config):
+    """Register custom markers so --strict-markers does not error out."""
+    config.addinivalue_line(
+        "markers",
+        "slow: tests that need a large matrix and substantial wall time "
+        "(typically 128^3 stiff Laplacian; opt out with `-m 'not slow'`)",
+    )

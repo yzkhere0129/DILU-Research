@@ -1,0 +1,21 @@
+{
+  "host_tag": "Yzk-laptop_RTX_3050",
+  "protocols": {
+    "fresh_e12_IR": {
+      "primary_iters": 18,
+      "primary_status": 0,
+      "refine_iters": [
+        16
+      ],
+      "rel_residual": 1.8854781466940288e-14,
+      "x_sha256": "aa3e040cdccad146af49d6dadd998d6772ac514451c9e63506497b36f4c41950"
+    },
+    "fresh_e8": {
+      "primary_iters": 12,
+      "primary_status": 0,
+      "refine_iters": [],
+      "rel_residual": 4.46255100597789e-08,
+      "x_sha256": "5e7ae14386d55226dd8918fbd587f236a7e1051ab1efaef4523ebd6a3a153385"
+    }
+  }
+}

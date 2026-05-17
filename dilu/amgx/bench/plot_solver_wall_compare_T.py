@@ -52,6 +52,34 @@ def per_step_wall_from_npz(npz_path: Path):
     return ts_list, total, iters
 
 
+TARGETS_S = {
+    "3.2e-07":  3.2e-7,
+    "3.8e-07":  3.8e-7,
+    "4.1e-07":  4.1e-7,
+    "7e-07":    7.0e-7,
+    "9e-07":    9.0e-7,
+    "1.06e-06": 1.06e-6,
+}
+
+
+def sample_closest_6(ts_list, walls, iters):
+    """From a larger ts_list (e.g. dense_track 384), pick the entries closest to
+    the 6 single_track target timesteps. Returns walls[6], iters[6] aligned
+    to TS_ORDER (NaN if no match within 5 ns)."""
+    walls_out = []
+    iters_out = []
+    for t_key in TS_ORDER:
+        target = TARGETS_S[t_key]
+        diffs = [abs(float(s) - target) for s in ts_list]
+        i = int(np.argmin(diffs))
+        if diffs[i] > 5e-9:  # > 5 ns drift
+            walls_out.append(np.nan); iters_out.append(0)
+        else:
+            walls_out.append(float(walls[i]))
+            iters_out.append(int(iters[i]))
+    return walls_out, iters_out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dev-results", required=True,
@@ -69,21 +97,25 @@ def main():
     # Build series (name, color, walls[6], iters[6], err_K[6])
     series = []
 
-    def collect_protocol(src_dir, proto, label, color, scale=1.0):
+    def collect_protocol(src_dir, proto, label, color):
         npz = src_dir / f"replay_{proto}.npz"
         if not npz.exists():
             print(f"  skip {label}: {npz} not found")
             return None
         ts_list, total, iters = per_step_wall_from_npz(npz)
-        walls = []
-        iter_vals = []
-        for t in TS_ORDER:
-            try:
-                i = ts_list.index(t)
-                walls.append(float(total[i]) * scale)
-                iter_vals.append(int(iters[i]))
-            except ValueError:
-                walls.append(np.nan); iter_vals.append(0)
+        if len(ts_list) >= 50:
+            # Likely dense_track 384 — sample closest to single_track 6
+            walls, iter_vals = sample_closest_6(ts_list, total, iters)
+        else:
+            # Exact single_track 6
+            walls = []; iter_vals = []
+            for t in TS_ORDER:
+                try:
+                    i = ts_list.index(t)
+                    walls.append(float(total[i]))
+                    iter_vals.append(int(iters[i]))
+                except ValueError:
+                    walls.append(np.nan); iter_vals.append(0)
         return (label, color, walls, iter_vals)
 
     # 5060 amortized_e8 (橙)

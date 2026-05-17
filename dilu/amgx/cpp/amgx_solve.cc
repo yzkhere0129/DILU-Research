@@ -134,7 +134,12 @@ static ffi::Error AmgxSolveImpl(
   std::fprintf(stderr, "[dilu_amgx verbose] solve: download done\n");
 #endif
 
-  // Write scalars to output buffers (4-byte H→D each).
+  // Write scalars to output buffers (4-byte H→D each). The stack-local
+  // iters_host/status_host go out of scope when this frame unwinds, so we
+  // MUST synchronize the stream before returning — otherwise a future XLA
+  // scheduler change (pinned-host or CUDA graphs) could fire the copies
+  // after the source bytes are gone. cudaStreamSynchronize is microseconds
+  // vs the AMGx solve, so the cost is negligible.
   int32_t iters_host = static_cast<int32_t>(n_iter);
   int32_t status_host = static_cast<int32_t>(solve_status);
   CHECK_CUDA(cudaMemcpyAsync(iters_out->typed_data(), &iters_host,
@@ -143,6 +148,7 @@ static ffi::Error AmgxSolveImpl(
   CHECK_CUDA(cudaMemcpyAsync(status_out->typed_data(), &status_host,
                              sizeof(int32_t),
                              cudaMemcpyHostToDevice, stream));
+  CHECK_CUDA(cudaStreamSynchronize(stream));
   return ffi::Error::Success();
 }
 

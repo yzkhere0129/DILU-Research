@@ -104,13 +104,6 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     else:
         raise ValueError(f"unknown pair {pair}")
 
-    # Override VMIN/VMAX for LU_vs_AMGx_e12 pair (much smaller diffs — ppb level)
-    global VMIN, VMAX
-    if pair == "LU_vs_AMGx_e12":
-        vmin_use, vmax_use = 1e-15, 1e-7  # % — diffs are at ~1e-9 % rel
-    else:
-        vmin_use, vmax_use = VMIN, VMAX
-
     diff_flat_Pa = np.abs(a - b)
     x_max = float(np.max(np.abs(b)))  # peak of reference solution (used as normalizer)
     diff_flat = diff_flat_Pa / max(x_max, 1e-300) * 100.0  # relative diff in %
@@ -126,7 +119,26 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
     cells_gt_100Pa = int(np.sum(diff_flat_Pa > 100.0))
     cells_gt_1kPa = int(np.sum(diff_flat_Pa > 1000.0))
 
-    fig, axes = plt.subplots(2, 4, figsize=(20, 9))
+    # Auto-fit colorbar so vmax sits ON the actual data max (round up to the
+    # nearest decade) — avoids the misread "max ≈ colorbar top" when there is
+    # a large headroom between the brightest cell and the colorbar end.
+    # LU_vs_AMGx_e12 keeps tight hardcoded range for the ε-machine pair.
+    # Auto-fit colorbar so vmax sits at the actual data max (rounded up to the
+    # nearest 1/2/5 × 10^n), regardless of pair — no more "colorbar top way
+    # higher than the brightest cell" misread.
+    x = max(max_diff_pct, 1e-15)
+    exp = np.floor(np.log10(x))
+    m = x / 10.0**exp
+    if   m <= 1.0: vmax_use = 1.0 * 10.0**exp
+    elif m <= 2.0: vmax_use = 2.0 * 10.0**exp
+    elif m <= 5.0: vmax_use = 5.0 * 10.0**exp
+    else:          vmax_use = 1.0 * 10.0**(exp+1)
+    vmin_use = max(vmax_use / 1e8, 1e-16)
+
+    # Figsize tuned for aspect="equal" with xy slice 200×800 (1:4) and xz 200×200 (1:1).
+    # 4 cols (each 3 in wide), row1 12 in tall (4× col), row2 3 in tall (1× col).
+    fig, axes = plt.subplots(2, 4, figsize=(14, 16),
+                              gridspec_kw={"height_ratios": [4, 1]})
     cmap = "magma"
     norm = LogNorm(vmin=vmin_use, vmax=vmax_use)
 
@@ -153,7 +165,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         if col == 0: ax.set_ylabel("y (μm) — laser scan axis", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, ny*dx)
         ax.tick_params(labelsize=7)
-        ax.set_aspect("auto")
+        ax.set_aspect("equal")
 
     # ---- Row 2: xz side-view slices at 4 y-positions ----
     for col, y_um in enumerate(Y_SLICES_UM):
@@ -177,7 +189,7 @@ def main(phase: str, t: str, pair: str = "OF_vs_AMGx_e8"):
         if col == 0: ax.set_ylabel("z (μm) — depth", fontsize=8)
         ax.set_xlim(0, nx*dx); ax.set_ylim(0, nz*dx)
         ax.tick_params(labelsize=7)
-        ax.set_aspect("auto")
+        ax.set_aspect("equal")
 
     # Shared colorbar
     cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap),

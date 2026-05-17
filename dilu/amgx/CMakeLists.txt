@@ -7,7 +7,12 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 86)  # RTX 3050 Laptop; override for server GPUs.
+  # Override via cmake -DCMAKE_CUDA_ARCHITECTURES="89;90;120" .. or the
+  # DILU_AMGX_CUDA_ARCH env var consumed by build.sh.
+  # Default 86 = RTX 3050 Ampere; common alternatives:
+  #   89=Ada (RTX 4090 / L40), 90=H100 Hopper,
+  #   120=Blackwell (RTX 5060, CUDA 13+).
+  set(CMAKE_CUDA_ARCHITECTURES 86)
 endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -21,7 +26,9 @@ if(NOT DEFINED JAX_FFI_INCLUDE_DIR)
     RESULT_VARIABLE JAX_FFI_PROBE_RC)
   if(NOT JAX_FFI_PROBE_RC EQUAL 0)
     message(FATAL_ERROR
-      "Failed to locate jax.ffi.include_dir() — is /home/yzk/jax-env active?")
+      "Failed to locate jax.ffi.include_dir(). Is your JAX virtualenv "
+      "active and importable as `${Python3_EXECUTABLE}`? You can also "
+      "bypass the probe with -DJAX_FFI_INCLUDE_DIR=/path/to/jax/ffi/include.")
   endif()
 endif()
 message(STATUS "JAX FFI include dir: ${JAX_FFI_INCLUDE_DIR}")
